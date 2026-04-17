@@ -1,0 +1,38 @@
+choice = questdlg('Are you sure you want to run this script?', ...
+                  'Confirm Execution', ...
+                  'Yes','No','No');
+
+if strcmp(choice, 'Yes')
+    disp('Running script...');
+    % Put your script code here
+else
+    disp('Execution cancelled.');
+end
+
+run("../startup.m") %run Differentiable SoRoSim startup script
+
+run("RailParameters.m")
+
+ndof = RailLinkage.ndof+6;
+q_b0 = zeros(RailLinkage.ndof,1);
+s0 = 0.1;
+tf = 5.0;
+dt = 0.001;
+
+g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0);
+q_m0 = piecewise_logmap(g_s0);
+
+x0 = [q_b0;q_m0;zeros(ndof,1)];
+
+[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt)
+
+%[tvec_out, x_out, xdot_out] = BaumgarteBeamOnly(RailLinkage,[x0(1:RailLinkage.ndof);zeros(RailLinkage.ndof,1)],tf,dt)
+%plotqt(RailLinkage,tvec_out,x_out)
+JacobianDotAtS(RailLinkage, q_b0, q_b0, s0)
+Jacobian(RailLinkage, q_b0)
+JacobianTEST(RailLinkage, q_b0)
+
+plotRail(RailLinkage,x_out(1,:))
+plotRail(RailLinkage,x_out(end,:))
+
+AnimateRail(RailLinkage, tvec_out, x_out)%, options)
