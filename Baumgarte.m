@@ -1,5 +1,5 @@
 
-function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
+function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
     ndof = Linkage.ndof;
     ndof_mass = 6;
     mass = 1.0;
@@ -8,16 +8,14 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
     n_beam  = ndof;
     n_mass  = ndof_mass;
     n       = n_beam + n_mass;    % number of position DOFs
-
-    alpha = 0.0;% 0.0;%  % damping
-    beta =  0.0;%0.0;% % stiffness
+    
+    t_baum = 0.1;
+    alpha =    1/t_baum; %50.0;%0.0;%% damping
+    beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
     T_full_init = FwdKinematics(Linkage, x0(1:ndof));
     T_L_init = T_full_init(end-3:end, :);
     T_0_init = T_full_init(1:4,:);
-
-    support = "pin-pin"; 
-    %support = "fixed-fixed"; 
 
     function err = carriage_constraint_err(Linkage, s, q)
         % Split generalized coordinates
@@ -39,12 +37,17 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         T_L = T_L_full(end-3:end,:);
         
         if support == "pin-pin"
-         %T_L = T_L(end-3:end,:);
-         %err = T_L_init(1:3,4) - T_L(1:3,4);
-         err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
-         err = err_full(4:6);
+         T_L = T_L(end-3:end,:);
+         err = T_L(1:3,4) - T_L_init(1:3,4);
+         %err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
+         %err = err_full(4:6);
 
         elseif support == "fixed-fixed"
+         %dg = T_L_init \ T_L;
+         %err = piecewise_logmap(dg);
+         err = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
+
+        elseif support == "pin-fixed"
          %dg = T_L_init \ T_L;
          %err = piecewise_logmap(dg);
          err = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
@@ -56,7 +59,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         T_0 =variable_expmap_g(Xpos(1:6));
         
         if support == "pin-pin"
-            %err = T_0_init(1:3,4) - T_0(1:3,4); 
+            %err =  T_0(1:3,4)- T_0_init(1:3,4); 
             err_full = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
             err = err_full(4:6);
 
@@ -66,6 +69,11 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
          %dg = T_0_init \ T_0;
          %err = piecewise_logmap(dg);
          err = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
+
+        elseif support == "pin-fixed"
+            %err =  T_0(1:3,4) - T_0_init(1:3,4); 
+            err_full = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
+            err = err_full(4:6);
         end
     end
 
@@ -89,7 +97,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         % solve internal coordinate s
         % ----------------------------
         s = ProjectS(Linkage, q_b, q_mass);
-        %disp(['s = ', num2str(s)]);
+        disp(['s = ', num2str(s)]);
         
         
         % ----------------------------
@@ -115,7 +123,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         % ---------------------------
 
         I_body = diag([I_mass I_mass I_mass]);
-        Mm = spatial_inertia(mass, I_body, [0 0 0]);
+        Mm = body_inertia(mass, I_body, [0 0 0]);
         
         Cm = dinamico_coadj(qd_mass) * Mm;
         
@@ -160,11 +168,29 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         %J_0_full = jacobian_fd(fk_0_wrapper, xpos);
         
         J_full = Jacobian(Linkage,q_b);
+        Jd_full = Jacobiandot_corrected(Linkage,q_b,qd_b);
+        
+        T_full = FwdKinematics(Linkage,q_b);
+        T_tip = T_full(end-3:end,:);
+
+        J_end = dinamico_Adjoint(ginv(T_tip))*J_full(end-5:end,:);
+        %Jd_end 
+        %J_end = J_full(end-5:end,:);
+
         if support == "fixed-fixed"
             J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
             J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
+
+            Jd_L_full = horzcat(Jd_full(end-5:end,:),zeros(6,n_mass));
+            Jd_0_full = horzcat(Jd_full(1:6,:),zeros(6,n_mass));
         elseif support == "pin-pin"
-            J_L_full = horzcat(J_full(end-2:end,:),zeros(3,n_mass));
+            %J_L_full = horzcat(J_full(end-2:end,:),zeros(3,n_mass));
+            J_L_full = horzcat(J_end(end-2:end,:),zeros(3,n_mass));
+            J_0_full = horzcat(J_full(4:6,:),zeros(3,n_mass));
+
+        elseif support == "pin-fixed"
+            %J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
+            J_L_full = horzcat(J_end(end-5:end,:),zeros(6,n_mass));
             J_0_full = horzcat(J_full(4:6,:),zeros(3,n_mass));
         end
         
@@ -186,10 +212,15 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         %J_mass_full = J_mass + dphi_ds * ds_dq';
 
         J_mass_full = horzcat(JacobianAtS(Linkage, q_b,s),-eye(n_mass)); %fixes mass to point
+        
+        Jd_mass_full = horzcat(JacobianDotAtS(Linkage, q_b, qd_b,s),zeros(n_mass,n_mass)); %fixes mass to point
 
         fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
         
-        J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)]; %+ dphi_ds * ds_dq'; %correction
+        J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
+        %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+        
+        Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
 
         % ----------------------------
         % full constraint matrix
@@ -198,6 +229,10 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
                J_L_full;
                J_0_full];
         
+        Jd_c = [Jd_mass_corrected % free to move along x
+               Jd_L_full;
+               Jd_0_full];
+
         err_pos = [ fk_mass_err(1:3); fk_mass_err(5:6);% free to move along x
                    fk_L_wrapper(xpos);
                    fk_0_wrapper(xpos)];
@@ -207,6 +242,8 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         % ----------------------------
         % constraint solve
         % ----------------------------
+        %disp('M_full_cond = ');
+        %display(cond(M_full));
         Y = M_full \ J_c';
         S = J_c * Y;
         
@@ -215,10 +252,15 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         %    S = S + 1e-9 * eye(size(S,1));
         %end
         
+        %rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
+        %             + alpha * err_vel + beta * err_pos;
         rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
-                     + alpha * err_vel + beta * err_pos;
+             + Jd_c * xvel ...
+             + alpha * err_vel + beta * err_pos;
         
-        lambda = S \ rhs_lambda;
+        %lambda = S \ rhs_lambda;
+        lambda = pinv(S)*rhs_lambda;
+
         
         % ----------------------------
         % acceleration
@@ -234,32 +276,14 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
         
     end
 
-    % Condition function: returns 0 when trigger happens
-    function [value, isterminal, direction] = term_condition(t, x)
-        
-        ndof = Linkage.ndof;
-        s = x(ndof + 1);
-        
-        L = Linkage.VLinks(1).L;
-        
-        % event trigger condition
-        value = min(s - 0.1, (L - 0.1) - s);
-        
-        % stop integration when event hits zero
-        isterminal = 1;
-        
-        % detect both increasing/decreasing crossings
-        direction = 0;
-    
-    end
-
     tspan = [0 tf];
 
     % ----------------------------
     % ODE options with event function
     % ----------------------------
-    opts = odeset('OutputFcn', @showTime,'Events', @term_condition);
-    
+    %opts = odeset('OutputFcn', @showTime,'Events', @term_condition);
+    opts = odeset('OutputFcn', @showTime);
+
     disp("Simulating...");
     
     [t, x] = ode15s(@dynamics, tspan, x0, opts);
@@ -282,7 +306,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt)
     xdot_out = interp1(tvec, xdot_sol, tvec_out, 'linear');
 end
 
-function M = spatial_inertia(m, Inertia, com)
+function M = body_inertia(m, Inertia, com)
 
     % skew-symmetric matrix of COM
     px = [   0       -com(3)   com(2);

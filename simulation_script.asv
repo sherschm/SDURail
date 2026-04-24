@@ -16,7 +16,7 @@ run("RailParameters.m")
 ndof = RailLinkage.ndof+6;
 q_b0 = zeros(RailLinkage.ndof,1);
 s0 = 0.75;
-tf = 0.5;
+tf = 2.0;
 dt = 0.001;
 
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0);
@@ -24,12 +24,18 @@ q_m0 = piecewise_logmap(g_s0);
 
 x0 = [q_b0;q_m0;zeros(ndof,1)];
 
-[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt)
-%[ID,tau,e,dID_dq,dID_dqd,dID_dqdd,dID_dlambda,dtau_dq,dtau_dqd,dtau_du,de_dq,de_dqd,de_dqdd,daction_dq,daction_dqd] 
-%[ID,tau,e,dID_dq,dID_dqd,dID_dqdd] = DAEJacobians(RailLinkage,0.0,q_b0,zeros(RailLinkage.ndof,1),zeros(RailLinkage.ndof,1),[],[],[]);
+support = "pin-pin"; 
+%support = "fixed-fixed"; 
 
-plotRail(RailLinkage,x_out(1,:))
-plotRail(RailLinkage,x_out(end,:))
+[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
 
-AnimateRail(Linkage, t, x, options)
-animateRail(RailLinkage,x_out)
+%[tvec_out, x_out, xdot_out] = BaumgarteBeamOnly(RailLinkage,[x0(1:RailLinkage.ndof);zeros(RailLinkage.ndof,1)],tf,dt)
+%plotqt(RailLinkage,tvec_out,x_out)
+%JacobianDotAtS(RailLinkage, q_b0, q_b0, s0)
+%Jacobian(RailLinkage, q_b0)
+%JacobianTEST(RailLinkage, q_b0)
+
+%plotRail(RailLinkage,x_out(1,:))
+%plotRail(RailLinkage,x_out(end,:))
+
+AnimateRail(RailLinkage, tvec_out, x_out)%, options)

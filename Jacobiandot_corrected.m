@@ -1,25 +1,47 @@
-function Jd = JacobianDotAtS(Linkage, q, qd, s)
+%Function that calculates the derivative of the jacobian with respect to
+%time (Jd) at every significant point (24.05.2021)
 
-if isrow(q);  q  = q';  end
-if isrow(qd); qd = qd'; end
+function Jd = Jacobiandot_corrected(Linkage,q,qd,i_here,j_here) %i_here is link index, j_here is division (0 for joint)
 
-N     = Linkage.N;
-ndof  = Linkage.ndof;
-g_ini   = Linkage.g_ini;
+if isrow(q)
+    q=q';
+end
+if isrow(qd)
+    qd=qd';
+end
+
+N       = Linkage.N;
+ndof    = Linkage.ndof;
+g_ini   = Linkage.g_ini; %initial configuration of all link wrt its previous link
 iLpre   = Linkage.iLpre;
-g_tip   = repmat(eye(4), N, 1);
-Jd_tip  = zeros(6*N, ndof);
-eta_tip = zeros(6*N, 1);
+g_tip   = repmat(eye(4),N,1);
+Jd_tip  = zeros(6*N,ndof);
+eta_tip = zeros(6*N,1);
 
-full  = true;
-nsig  = Linkage.nsig;
+full = false;
+if nargin==5
+    if j_here==0
+        nsig = 1;
+    else
+        nsig = Linkage.CVRods{i_here}(j_here+1).nip; %j_here>1 is allowed only for soft links
+    end
+elseif nargin==4
+    if Linkage.VLinks(Linkage.LinkIndex(i_here)).linktype=='s'
+        nsig = 1;
+        for j=1:Linkage.VLinks(Linkage.LinkIndex(i_here)).npie-1
+            nsig = nsig+Linkage.CVRods{i_here}(j+1).nip;
+        end
+    else
+        nsig = 2; %joint and CM
+    end
+else
+    full  = true;
+    nsig  = Linkage.nsig;
+end
 
-% Output (single point)
-Jd = zeros(6, ndof);
+Jd        = zeros(6*nsig,ndof);
+dof_start = 1; %starting dof of current piece
 i_sig     = 1;
-dof_start = 1;
-s_acc = 0;
-done = false;
 
 
 for i = 1:N
@@ -35,17 +57,14 @@ for i = 1:N
         eta_here   = zeros(6,1);
     end
     
-    % ----------------------------
-    % joint
-    % ----------------------------
+    %Joint
     dof_here = Linkage.CVRods{i}(1).dof;
     q_here   = q(dof_start:dof_start+dof_here-1);
     qd_here  = qd(dof_start:dof_start+dof_here-1);
-    
     Phi_here = Linkage.CVRods{i}(1).Phi;
     xi_star  = Linkage.CVRods{i}(1).xi_star;
     
-    if dof_here == 0
+    if dof_here == 0 %fixed joint (N)
         g_joint = eye(4);
         S_here  = zeros(6,ndof);
         Sd_here = zeros(6,ndof);
@@ -60,30 +79,42 @@ for i = 1:N
         Sd_here(:,dof_start:dof_start+dof_here-1) = dinamico_adj(eta_here)*Tg*Phi_here+Tgd*Phi_here;
     end
     
-    % propagate
-    g_here = g_here * g_joint;
-    Ad_inv = dinamico_Adjoint(ginv(g_joint));
-    
-    Jd_here  = Ad_inv * (Jd_here + Sd_here);
-    eta_here = Ad_inv * (eta_here + ...
-                S_here(:,dof_start:dof_start+dof_here-1)*qd_here);
-    
-    dof_start = dof_start + dof_here;
+    %updating g, Jacobian, Jacobian_dot and eta
+    g_here         = g_here*g_joint;
+    Ad_g_joint_inv = dinamico_Adjoint(ginv(g_joint));
+    Jd_here        = Ad_g_joint_inv*(Jd_here+Sd_here);
+    eta_here       = Ad_g_joint_inv*(eta_here+S_here(:,dof_start:dof_start+dof_here-1)*qd_here);
     
     if full||(i==i_here&&nargin==4)||(i==i_here&&j_here==0)
-       % Jd((i_sig-1)*6+1:i_sig*6,:) = Jd_here;
+        Jd((i_sig-1)*6+1:i_sig*6,:) = Jd_here;
         i_sig                       = i_sig+1;
     end
-    % STOP check
-    if s_acc >= s
-        Jd = Jd_here;
-        return
+    
+    if Linkage.VLinks(Linkage.LinkIndex(i)).linktype == 'r'
+        
+        gi        = Linkage.VLinks(Linkage.LinkIndex(i)).gi;
+        g_here    = g_here*gi;
+        Ad_gi_inv = dinamico_Adjoint(ginv(gi));
+        Jd_here   = Ad_gi_inv*Jd_here;
+        eta_here  = Ad_gi_inv*eta_here;
+        
+        if full||(i==i_here&&nargin==4)
+            Jd((i_sig-1)*6+1:i_sig*6,:) = Jd_here;
+            i_sig                       = i_sig+1;
+        end
+        
+        % bringing all quantities to the end of rigid link
+        gf        = Linkage.VLinks(Linkage.LinkIndex(i)).gf;
+        g_here    = g_here*gf;
+        Ad_gf_inv = dinamico_Adjoint(ginv(gf));
+        Jd_here   = Ad_gf_inv*Jd_here;
+        eta_here  = Ad_gf_inv*eta_here;
+        
     end
-
-    % ----------------------------
-    % ONLY SOFT LINK HANDLED FOR s
-    % ----------------------------
-    for j = 1:Linkage.VLinks(Linkage.LinkIndex(i)).npie-1
+    
+    dof_start = dof_start+dof_here;
+    
+    for j = 1:Linkage.VLinks(Linkage.LinkIndex(i)).npie-1 %will run only if soft link
         
         dof_here = Linkage.CVRods{i}(j+1).dof;
         q_here   = q(dof_start:dof_start+dof_here-1);
@@ -93,7 +124,8 @@ for i = 1:N
         ld       = Linkage.VLinks(Linkage.LinkIndex(i)).ld{j};
         Xs       = Linkage.CVRods{i}(j+1).Xs;
         nip      = Linkage.CVRods{i}(j+1).nip;
-     
+        
+        
         %updating g, Jacobian, Jacobian_dot and eta at X=0
         g_here   = g_here*gi;
         Ad_gi_inv = dinamico_Adjoint(ginv(gi));
@@ -104,28 +136,11 @@ for i = 1:N
             Jd((i_sig-1)*6+1:i_sig*6,:) = Jd_here;
             i_sig                       = i_sig+1;
         end 
-
-        if s_acc >= s
-            J = J_here;
-            return
-        end
-        % ----------------------------
-        % find interval containing s
-        % ----------------------------
+        
+        
         for ii = 2:nip
             
-            %H    = (Xs(ii)-Xs(ii-1))*ld;
-            H_full = (Xs(ii)-Xs(ii-1)) * ld;
-            s_next = s_acc + H_full;
-
-            % truncate last step if needed
-            if s <= s_next
-                H = s - s_acc;
-                done = true;
-            else
-                H = H_full;
-            end
-
+            H    = (Xs(ii)-Xs(ii-1))*ld;
             
             if Linkage.Z_order==4
                 
@@ -206,21 +221,20 @@ for i = 1:N
                 i_sig                       = i_sig+1;
             end
             
-
-            % STOP exactly at s
-            if done
-                %J = J_here;
-                Jd = Jd_here;
-                return
-            end
-
-            s_acc = s_next;
-
         end
-    
+        
+        %updating g, Jacobian, Jacobian_dot and eta at X=L
+        gf        = Linkage.VLinks(Linkage.LinkIndex(i)).gf{j};
+        g_here    = g_here*gf;
+        Ad_gf_inv = dinamico_Adjoint(ginv(gf));
+        Jd_here   = Ad_gf_inv*Jd_here;
+        eta_here  = Ad_gf_inv*eta_here;
+        
+        dof_start  = dof_start+dof_here;
+    end
     g_tip((i-1)*4+1:i*4,:)   = g_here;
     Jd_tip((i-1)*6+1:i*6,:)  = Jd_here;
     eta_tip((i-1)*6+1:i*6,:) = eta_here;
 end
-
 end
+
