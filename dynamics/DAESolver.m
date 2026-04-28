@@ -280,9 +280,9 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
     % ----------------------------
     % ODE options with event function
     % ----------------------------
-    %opts = odeset('RelTol',1e-4,'AbsTol',1e-6, 'OutputFcn', @showTime);
-    %opts = odeset('OutputFcn', @showTime);
-    opts = odeset('RelTol',1e-6,'AbsTol',1e-8, 'OutputFcn', @(t,y,flag) showTime(t,y,flag, Linkage));
+    %opts = odeset('RelTol',1e-4,'AbsTol',1e-6, 'OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage));
+    opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage));
+    %opts = odeset('RelTol',1e-6,'AbsTol',1e-8, 'OutputFcn', @(t,y,flag) showTime(t,y,flag, Linkage));
 
     disp("Simulating...");
 

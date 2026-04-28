@@ -8,12 +8,13 @@ if strcmp(choice, 'Yes')
 else
     disp('Execution cancelled.');
 end
+
+run("../startup.m") %run Differentiable SoRoSim startup script
+
 addpath('dynamics')
 addpath('helper_functions')
 addpath('kinematics')
 addpath('visualisation')
-
-run("../startup.m") %run Differentiable SoRoSim startup script
 
 run("RailParameters.m")
 
@@ -44,15 +45,12 @@ ylabel('\Phi(1,j)');
 title('First row of Phi vs X');
 grid on;
 
-
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0);
 q_m0 = piecewise_logmap(g_s0);
 
 x0 = [q_b0;q_m0;zeros(ndof,1)];
 
-
 fixed_carriage = false;
-
 
 if fixed_carriage == true
     nc_carriage = 6;
@@ -78,3 +76,5 @@ ydot0 = zeros(size(y0));
 
 [tvec_out, x_out, xdot_out, lam_out] = DAESolver(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 AnimateRail(RailLinkage, tvec_out, x_out)%, options)
+
+plotResults(tvec_out, x_out, dt, RailLinkage)
