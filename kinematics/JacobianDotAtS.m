@@ -1,4 +1,4 @@
-function Jd = JacobianDotAtS(Linkage, q, qd, s)
+function Jd_out = JacobianDotAtS(Linkage, q, qd, s)
 
 if isrow(q);  q  = q';  end
 if isrow(qd); qd = qd'; end
@@ -13,6 +13,8 @@ eta_tip = zeros(6*N, 1);
 
 full  = true;
 nsig  = Linkage.nsig;
+
+Jd_out = zeros(6,ndof);
 
 % Output (single point)
 Jd = zeros(6, ndof);
@@ -210,10 +212,14 @@ for i = 1:N
             % STOP exactly at s
             if done
                 %J = J_here;
-                Jd = Jd_here;
+                Jd_out = Jd_here;
                 return
             end
-
+        
+            % if s> Linkage.VLinks.L
+            %     Jd_out = zeros(6,Linkage.ndof);%Jacobiandot()
+            %     return
+            % end
             s_acc = s_next;
 
         end

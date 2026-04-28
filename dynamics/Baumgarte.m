@@ -2,7 +2,7 @@
 function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
     ndof = Linkage.ndof;
     ndof_mass = 6;
-    mass = 1.0;
+    mass = 10.0;
     I_mass=0.1;
 
     n_beam  = ndof;
@@ -97,7 +97,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         % solve internal coordinate s
         % ----------------------------
         s = ProjectS(Linkage, q_b, q_mass);
-        disp(['s = ', num2str(s)]);
+        %disp(['s = ', num2str(s)]);
         
         
         % ----------------------------
@@ -174,7 +174,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         T_tip = T_full(end-3:end,:);
 
         J_end = dinamico_Adjoint(ginv(T_tip))*J_full(end-5:end,:);
-        Jd_end 
+        %Jd_end 
         %J_end = J_full(end-5:end,:);
 
         if support == "fixed-fixed"
@@ -188,6 +188,9 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
             J_L_full = horzcat(J_end(end-2:end,:),zeros(3,n_mass));
             J_0_full = horzcat(J_full(4:6,:),zeros(3,n_mass));
 
+            Jd_L_full = horzcat(Jd_full(end-2:end,:),zeros(3,n_mass));
+            Jd_0_full = horzcat(Jd_full(4:6,:),zeros(3,n_mass));
+
         elseif support == "pin-fixed"
             %J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
             J_L_full = horzcat(J_end(end-5:end,:),zeros(6,n_mass));
@@ -197,13 +200,13 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         % ----------------------------
         % ds/dq
         % ----------------------------
-        ds_dq = gradient_fd(@(q) ProjectS(Linkage, ...
-                          q(1:n_beam), q(n_beam+1:end)), xpos);
+        %ds_dq = gradient_fd(@(q) ProjectS(Linkage, ...
+                          %q(1:n_beam), q(n_beam+1:end)), xpos);
         
         % ----------------------------
         % dφ/ds
         % ----------------------------
-        dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, xpos), s);
+        %dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, xpos), s);
         
         % ----------------------------
         % mass constraint Jacobian
@@ -217,8 +220,10 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
 
         fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
         
-        %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
-        J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+        J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
+        %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+        
+        Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
 
         % ----------------------------
         % full constraint matrix
@@ -227,14 +232,16 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
                J_L_full;
                J_0_full];
         
+        Jd_c = [Jd_mass_corrected % free to move along x
+               Jd_L_full;
+               Jd_0_full];
+
         err_pos = [ fk_mass_err(1:3); fk_mass_err(5:6);% free to move along x
                    fk_L_wrapper(xpos);
                    fk_0_wrapper(xpos)];
         
         err_vel = J_c * xvel;
         
-        %err_acc = 
-
         % ----------------------------
         % constraint solve
         % ----------------------------
@@ -248,10 +255,14 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         %    S = S + 1e-9 * eye(size(S,1));
         %end
         
+        %rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
+        %             + alpha * err_vel + beta * err_pos;
         rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
-                     + alpha * err_vel + beta * err_pos;
+             + Jd_c * xvel ...
+             + alpha * err_vel + beta * err_pos;
         
         %lambda = S \ rhs_lambda;
+       % lambda = (S + 1e-8*eye(size(S))) \ rhs_lambda;
         lambda = pinv(S)*rhs_lambda;
 
         

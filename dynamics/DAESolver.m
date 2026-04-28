@@ -1,19 +1,19 @@
 
-function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
+function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,fixed_carriage)
     ndof = Linkage.ndof;
     ndof_mass = 6;
     mass = 1.0;
-    I_mass=0.1;
+    I_mass=0.0001;
 
     n_beam  = ndof;
     n_mass  = ndof_mass;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    t_baum = 0.1;
+    t_baum = 0.2;
     alpha =    1/t_baum; %50.0;%0.0;%% damping
     beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
-    T_full_init = FwdKinematics(Linkage, x0(1:ndof));
+    T_full_init = FwdKinematics(Linkage, y0(1:ndof));
     T_L_init = T_full_init(end-3:end, :);
     T_0_init = T_full_init(1:4,:);
 
@@ -26,7 +26,11 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         q_mass = q(n_beam+1:n_beam+n_mass);
         
         err_full = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
-        err = [err_full(1:3);err_full(5:6)];
+        if fixed_carriage == true
+            err = err_full;
+        else
+            err = [err_full(1:3);err_full(5:6)];
+        end
     end
 
     function err = fk_L_func(Linkage, Xpos, T_L_init, n_beam)
@@ -76,28 +80,28 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
             err = err_full(4:6);
         end
     end
+    
 
-    function dX = dynamics(t, X)
+    function F = dae_fun(t, y, ydot)
+        q     = y(1:n);
+        qd    = y(n+1:2*n);
+        lambda = y(2*n+1:end);
+        
+        qddot = ydot(n+1:2*n);
+        q_dot  = ydot(1:n);
+        
 
-        %disp(['t = ', num2str(t)]);
+        q_b    = q(1:n_beam);
+        q_mass = q(n_beam+1:n_beam+n_mass);
         
-        % ----------------------------
-        % unpack state
-        % ----------------------------
-        xpos = X(1:n);
-        xvel = X(n+1:2*n);
-        
-        q_b    = xpos(1:n_beam);
-        q_mass = xpos(n_beam+1:n_beam+n_mass);
-        
-        qd_b    = xvel(1:n_beam);
-        qd_mass = xvel(n_beam+1:n_beam+n_mass);
+        qd_b    = qd(1:n_beam);
+        qd_mass = qd(n_beam+1:n_beam+n_mass);
         
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
         s = ProjectS(Linkage, q_b, q_mass);
-        disp(['s = ', num2str(s)]);
+        %disp(['s = ', num2str(s)]);
         
         
         % ----------------------------
@@ -105,13 +109,6 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         % ----------------------------
 
         [ID,tau,e,dID_dq,Cb,Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
-
-        %Mb = GeneralizedMassMatrix(Linkage, q_b);
-        %Cb = GeneralizedCoriolisMatrix(Linkage, q_b, qd_b);
-        %gb = GeneralizedExternalForce(Linkage, q_b);
-        
-        %Kb = findK(Linkage);
-        %Db = findD(Linkage);
         
         % ----------------------------
         % kinematics at s
@@ -164,8 +161,8 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         % Jacobians (requires AD or finite diff)
         % =================================================
         
-        %J_L_full = jacobian_fd(fk_L_wrapper, xpos);
-        %J_0_full = jacobian_fd(fk_0_wrapper, xpos);
+        %J_L_full = jacobian_fd(fk_L_wrapper, q);
+        %J_0_full = jacobian_fd(fk_0_wrapper, q);
         
         J_full = Jacobian(Linkage,q_b);
         Jd_full = Jacobiandot_corrected(Linkage,q_b,qd_b);
@@ -173,7 +170,7 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         T_full = FwdKinematics(Linkage,q_b);
         T_tip = T_full(end-3:end,:);
 
-        J_end = dinamico_Adjoint(ginv(T_tip))*J_full(end-5:end,:);
+        J_end = dinamico_Adjoint(T_tip)*J_full(end-5:end,:);
         %Jd_end 
         %J_end = J_full(end-5:end,:);
 
@@ -188,6 +185,8 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
             J_L_full = horzcat(J_end(end-2:end,:),zeros(3,n_mass));
             J_0_full = horzcat(J_full(4:6,:),zeros(3,n_mass));
 
+            Jd_L_full = horzcat(Jd_full(end-2:end,:),zeros(3,n_mass));
+            Jd_0_full = horzcat(Jd_full(4:6,:),zeros(3,n_mass));
         elseif support == "pin-fixed"
             %J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
             J_L_full = horzcat(J_end(end-5:end,:),zeros(6,n_mass));
@@ -197,13 +196,13 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
         % ----------------------------
         % ds/dq
         % ----------------------------
-        ds_dq = gradient_fd(@(q) ProjectS(Linkage, ...
-                          q(1:n_beam), q(n_beam+1:end)), xpos);
+        ds_dq = gradient_fd(@(vars) ProjectS(Linkage, ...
+                          vars(1:n_beam), vars(n_beam+1:end)), q);
         
         % ----------------------------
         % dφ/ds
         % ----------------------------
-        dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, xpos), s);
+        dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, q), s);
         
         % ----------------------------
         % mass constraint Jacobian
@@ -213,87 +212,90 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
 
         J_mass_full = horzcat(JacobianAtS(Linkage, q_b,s),-eye(n_mass)); %fixes mass to point
         
-        Jd_mass_full = horzcat(JacobianDotAtS(Linkage, q_b, qd_b,s),zeros(n_mass,n_mass)); %fixes mass to point
 
-        fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
+        %disp(size(JacobianDotAtS(Linkage, q_b, qd_b,s)));
+        %disp(s)
+        Jd_mass_full = horzcat(JacobianDotAtS(Linkage, q_b, qd_b,s),zeros(n_mass,n_mass)); %fixes mass to point
         
-        J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
-        %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
-        
-        Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
+        %fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass; 
+        fk_mass_err = carriage_constraint_err(Linkage, s, q);
+
+        if fixed_carriage == true
+            J_mass_corrected = J_mass_full(1:6,:);
+            Jd_mass_corrected = Jd_mass_full(1:6,:);
+        else
+            J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
+            %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+            Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)]; % + dphi_ds * ds_dq'; %correction
+        end
 
         % ----------------------------
         % full constraint matrix
         % ----------------------------
-        J_c = [J_mass_corrected % free to move along x
+        J_c = [J_mass_corrected; % free to move along x
                J_L_full;
                J_0_full];
-        
-        Jd_c = [Jd_mass_corrected % free to move along x
+
+        Jd_c = [Jd_mass_corrected; % free to move along x
                Jd_L_full;
                Jd_0_full];
+        
+        err_pos = [carriage_constraint_err(Linkage, s, q);% free to move along x
+                   fk_L_wrapper(q);
+                   fk_0_wrapper(q)];
+        
+        err_vel = J_c * qd;
 
-        err_pos = [ fk_mass_err(1:3); fk_mass_err(5:6);% free to move along x
-                   fk_L_wrapper(xpos);
-                   fk_0_wrapper(xpos)];
-        
-        err_vel = J_c * xvel;
-        
-        % ----------------------------
-        % constraint solve
-        % ----------------------------
-        %disp('M_full_cond = ');
-        %display(cond(M_full));
-        Y = M_full \ J_c';
-        S = J_c * Y;
-        
-        % regularisation
-        %if cond(S) > 1e12
-        %    S = S + 1e-9 * eye(size(S,1));
-        %end
-        
-        %rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
-        %             + alpha * err_vel + beta * err_pos;
-        rhs_lambda = J_c * (M_full \ (g_full - C_full - K_full)) ...
-             + Jd_c * xvel ...
-             + alpha * err_vel + beta * err_pos;
-        
-        %lambda = S \ rhs_lambda;
-        lambda = pinv(S)*rhs_lambda;
+        F1 = q_dot - qd;
 
-        
-        % ----------------------------
-        % acceleration
-        % ----------------------------
-        qdd_full = M_full \ (g_full - C_full - K_full - J_c' * lambda);
-        
-        % ----------------------------
-        % state derivative
-        % ----------------------------
-        dX = zeros(size(X));
-        dX(1:n)    = xvel;
-        dX(n+1:2*n) = qdd_full;
+        F2 = M_full * qddot - (g_full - C_full - K_full - J_c' * lambda);
+
+        %F3 = err_pos;
+        %F3 = J_c * qd;
+        F3 = J_c * qddot + Jd_c*qd;
+        %F3 = J_c * qddot + Jd_c*qd + alpha*err_vel + beta*err_pos;
+       
+        % if cond(J_c) > 1e6
+        %     warning('J_c near singular at t=%g', t);
+        % end
+        % 
+        % if cond(M_full) > 1e6
+        %     warning('M_full ill-conditioned at t=%g', t);
+        % end
+
+        F = [F1;
+             F2;
+             F3];
         
     end
 
     tspan = [0 tf];
+    
 
+    [y0_consistent, ydot0_consistent] = decic( ...
+    @dae_fun, 0, ...
+    y0, [true(n,1); true(n,1); false(nc,1)], ...
+    ydot0, [false(2*n,1); true(nc,1)]);
+    
     % ----------------------------
     % ODE options with event function
     % ----------------------------
-    %opts = odeset('OutputFcn', @showTime,'Events', @term_condition);
-    opts = odeset('OutputFcn', @showTime);
+    %opts = odeset('RelTol',1e-4,'AbsTol',1e-6, 'OutputFcn', @showTime);
+    %opts = odeset('OutputFcn', @showTime);
+    opts = odeset('RelTol',1e-6,'AbsTol',1e-8, 'OutputFcn', @(t,y,flag) showTime(t,y,flag, Linkage));
 
     disp("Simulating...");
-    
-    [t, x] = ode15s(@dynamics, tspan, x0, opts);
+
+    [t,y] = ode15i(@dae_fun, [0 tf], y0_consistent, ydot0_consistent, opts);
+   
     
     % ----------------------------
     % unpack solution
     % ----------------------------
     
-    x_sol    = x(:,1:n);
-    xdot_sol = x(:,n+1:2*n);
+    q_sol   = y(:,1:n);
+    qd_sol  = y(:,n+1:2*n);
+    lam_sol = y(:,2*n+1:end);
     
     tvec = t;
     
@@ -302,8 +304,9 @@ function [tvec_out, x_out, xdot_out] = Baumgarte(Linkage,x0,tf,dt,support)
     % ----------------------------
     tvec_out = (0:dt:max(tvec))';
     
-    x_out = interp1(tvec, x_sol, tvec_out, 'linear');
-    xdot_out = interp1(tvec, xdot_sol, tvec_out, 'linear');
+    x_out = interp1(tvec, q_sol, tvec_out, 'linear');
+    xdot_out = interp1(tvec, qd_sol, tvec_out, 'linear');
+    lam_out = interp1(tvec, lam_sol, tvec_out, 'linear');
 end
 
 function M = body_inertia(m, Inertia, com)
@@ -322,11 +325,25 @@ function M = body_inertia(m, Inertia, com)
     
 end
 
-function status = showTime(t, y, flag)
+function status = showTime(t, y, flag, Linkage)
 
-    if isempty(flag)
-        fprintf('t = %.3f\r', t(end));
-    end
+   
+    %n_beam = 16; 
+    n_beam = Linkage.ndof;
 
+    n_mass = 6;
+    %disp(['s = ', num2str(s)]);
     status = 0;
+     if isempty(flag)
+        fprintf('t = %.3f\r', t(end));
+        q_b    = y(1:n_beam);
+        q_mass = y(n_beam+1:n_beam+n_mass);
+
+        % ----------------------------
+        % solve internal coordinate s
+        % ----------------------------
+        s = ProjectS(Linkage, q_b, q_mass);
+        fprintf('s = %.3f\r', s);
+    end
+    
 end

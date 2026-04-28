@@ -8,6 +8,10 @@ if strcmp(choice, 'Yes')
 else
     disp('Execution cancelled.');
 end
+addpath('dynamics')
+addpath('helper_functions')
+addpath('kinematics')
+addpath('visualisation')
 
 run("../startup.m") %run Differentiable SoRoSim startup script
 
@@ -15,8 +19,8 @@ run("RailParameters.m")
 
 ndof = RailLinkage.ndof+6;
 q_b0 = zeros(RailLinkage.ndof,1);
-s0 = 0.85;
-tf = 0.4;
+s0 = 0.8;
+tf = 1.0;
 dt = 0.001;
 
 %Plot strain basis functions
@@ -46,19 +50,31 @@ q_m0 = piecewise_logmap(g_s0);
 
 x0 = [q_b0;q_m0;zeros(ndof,1)];
 
+
+fixed_carriage = false;
+
+
+if fixed_carriage == true
+    nc_carriage = 6;
+else
+    nc_carriage = 5;
+end
+
 %support = "pin-pin"; 
+%nc = nc_carriage+ 6;
+
 %support = "pin-fixed"; 
+%nc = nc_carriage+ 9;
+
 support = "fixed-fixed"; 
+nc = nc_carriage+ 12;
 
-[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
 
-%[tvec_out, x_out, xdot_out] = BaumgarteBeamOnly(RailLinkage,[x0(1:RailLinkage.ndof);zeros(RailLinkage.ndof,1)],tf,dt)
-%plotqt(RailLinkage,tvec_out,x_out)
-%JacobianDotAtS(RailLinkage, q_b0, q_b0, s0)
-%Jacobian(RailLinkage, q_b0)
-%JacobianTEST(RailLinkage, q_b0)
+%[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
 
-%plotRail(RailLinkage,x_out(1,:))
-%plotRail(RailLinkage,x_out(end,:))
+lambda0_guess = zeros(nc,1);
+y0 = [x0; lambda0_guess];
+ydot0 = zeros(size(y0));
 
+[tvec_out, x_out, xdot_out, lam_out] = DAESolver(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 AnimateRail(RailLinkage, tvec_out, x_out)%, options)
