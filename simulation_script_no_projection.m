@@ -18,10 +18,10 @@ addpath('visualisation')
 
 run("RailParameters.m")
 
-ndof = RailLinkage.ndof+6;
+ndof = RailLinkage.ndof+6+1;
 q_b0 = zeros(RailLinkage.ndof,1);
-s0 = 0.5;
-tf = 3.0;
+s0 = 0.8;
+tf = 1.0;
 dt = 0.001;
 
 %Plot strain basis functions
@@ -48,8 +48,6 @@ grid on;
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0);
 q_m0 = piecewise_logmap(g_s0);
 
-x0 = [q_b0;q_m0;zeros(ndof,1)];
-
 fixed_carriage = false;
 
 if fixed_carriage == true
@@ -65,16 +63,13 @@ end
 %nc = nc_carriage+ 9;
 
 support = "fixed-fixed"; 
-nc = nc_carriage + 12;
+nc = nc_carriage+ 12;
 
-
-%[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
-
+x0 = [q_b0;q_m0;s0;zeros(ndof,1)];
 lambda0_guess = zeros(nc,1);
-y0 = [x0; lambda0_guess];
+y0 = [x0;s0; lambda0_guess];
 ydot0 = zeros(size(y0));
-
-[tvec_out, x_out, xdot_out, lam_out] = DAESolver(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
+[tvec_out, x_out, xdot_out, lam_out] = DAESolverWithSVariable(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 
 AnimateRail(RailLinkage, tvec_out, x_out)%, options)
 

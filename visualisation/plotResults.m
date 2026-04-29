@@ -39,18 +39,25 @@ function plotResults(tvec_out, x_sol, dt, Linkage)
     % Plot mass position
     % ----------------------------
     figure;
-    plot(tvec_out, x_mass, 'DisplayName','x (m)'); hold on;
-    plot(tvec_out, y_mass, 'DisplayName','y (m)');
-    plot(tvec_out, z_mass, 'DisplayName','z (m)');
+    plot(tvec_out, x_mass, 'DisplayName','x (m)', 'LineWidth', 2); hold on;
+    plot(tvec_out, y_mass, 'DisplayName','y (m)', 'LineWidth', 2);
+    plot(tvec_out, z_mass, 'DisplayName','z (m)', 'LineWidth', 2);
     xlabel('Time (s)');
     ylabel('Position (m)');
     legend;
+    legend('Location','east');
     grid on;
 
     % Save
     if ~exist('plots','dir')
         mkdir('plots');
     end
+    set(gcf, 'Units','pixels', 'Position',[100 100 500 350]);
+    set(findall(gcf,'type','axes'),'FontSize',14);
+    
+    set(gcf, 'PaperPositionMode','auto');
+    print('plots/response.png','-dpng','-r300');
+
     saveas(gcf, fullfile('plots','mass_response.png'));
 
     % ----------------------------
@@ -63,6 +70,13 @@ function plotResults(tvec_out, x_sol, dt, Linkage)
     xlabel('Time (s)');
     ylabel('ds/dt');
     grid on;
+
+    % Save
+    set(gcf, 'Units','pixels', 'Position',[100 100 500 350]);
+    set(findall(gcf,'type','axes'),'FontSize',14);
+
+    set(gcf, 'PaperPositionMode','auto');
+    print('plots/sdot.png','-dpng','-r300');
 
     % ----------------------------
     % Combined plots
@@ -84,7 +98,9 @@ function plotResults(tvec_out, x_sol, dt, Linkage)
     grid on;
 
     % Save
-    set(gcf,'Position',[100 100 1000 400]); % similar to layout (1,2)
-    print(fullfile('plots','response.png'),'-dpng','-r300');
-
+    set(gcf, 'Units','pixels', 'Position',[100 100 1000 350]);
+    set(findall(gcf,'type','axes'),'FontSize',14);
+    
+    set(gcf, 'PaperPositionMode','auto');
+    print('plots/response.png','-dpng','-r300');
 end

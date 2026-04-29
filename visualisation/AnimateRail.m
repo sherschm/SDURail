@@ -80,8 +80,8 @@ drawnow
 
 
 for tt=0:1/FrameRate:tmax
-
-    delete(findobj('type', 'patch'));
+    cla
+    %delete(findobj('type', 'patch'));
     title(strcat('t= ',num2str(tt)))
    
     xtt = interp1(t,x,tt);
