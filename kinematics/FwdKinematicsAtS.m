@@ -115,7 +115,15 @@ for i = 1:N
                 H = s - s_acc;
             else
                 H = H_full;
-            end
+            end   
+            
+            %smooth transition!
+            % x = s - s_acc;
+            % eps_s = 1e-6; % tune this
+            % 
+            % d = x - H_full;
+            % H = 0.5*(x + H_full - sqrt(d*d + eps_s^2));
+
 
             % ---- compute strain ----
             if Linkage.Z_order == 4

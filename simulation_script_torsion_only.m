@@ -4,12 +4,13 @@ addpath('helper_functions')
 addpath('kinematics')
 addpath('visualisation')
 addpath('link')
+addpath('linkage')
 
 run("RailParameters.m")
 
 ndof = RailLinkage.ndof+6;
 q_b0 = zeros(RailLinkage.ndof,1);
-s0 = 0.75;
+s0 = 2.5;
 tf = 1.0;
 dt = 0.001;
 
@@ -55,7 +56,7 @@ end
 
 support = "fixed-fixed"; 
 %nc = nc_carriage + 12;
-nc = nc_carriage + 11;
+nc = nc_carriage + 7;
 
 %[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
 
@@ -63,8 +64,7 @@ lambda0_guess = zeros(nc,1);
 y0 = [x0; lambda0_guess];
 ydot0 = zeros(size(y0));
 
-%[tvec_out, x_out, xdot_out, lam_out] = DAESolver(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
-[tvec_out, x_out, xdot_out, lam_out] = DAESolver(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
+[tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 
 AnimateRail(RailLinkage, tvec_out, x_out)
 

@@ -113,7 +113,7 @@ function s = ProjectS(Linkage, q_b, q_c, s_prev)
     % % clamp
     % s = max(0, min(L, s));
     
-    for k = 1:5
+    for k = 1:8
         T = FwdKinematicsAtS(Linkage, q_b, s);
         p_b = T(1:3,4);
         t = T(1:3,1);

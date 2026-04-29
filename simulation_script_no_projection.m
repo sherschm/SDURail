@@ -64,6 +64,7 @@ end
 
 support = "fixed-fixed"; 
 nc = nc_carriage+ 12;
+%nc = 12;
 
 x0 = [q_b0;q_m0;s0;zeros(ndof,1)];
 lambda0_guess = zeros(nc,1);

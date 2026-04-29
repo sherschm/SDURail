@@ -11,6 +11,8 @@ arguments
     % options.video_ext = ".mp4"
 end
 
+n_r = 9;
+
 close all
 
 % Video Settings
@@ -113,10 +115,10 @@ for tt=0:1/FrameRate:tmax
         end
         g_here     = g_here*g_joint;
         
-        n_r   = Linkage.VLinks(Linkage.LinkIndex(i)).n_r;
-        if Linkage.VLinks(Linkage.LinkIndex(i)).CS=='R'
-            n_r=5;
-        end
+        %n_r   = Linkage.VLinks(Linkage.LinkIndex(i)).n_r;
+        % if Linkage.VLinks(Linkage.LinkIndex(i)).CS=='R'
+        %     n_r=5;
+        % end
         n_l   = Linkage.VLinks(Linkage.LinkIndex(i)).n_l;
         color = Linkage.VLinks(Linkage.LinkIndex(i)).color;
         alpha = Linkage.VLinks(Linkage.LinkIndex(i)).alpha;
@@ -137,7 +139,7 @@ for tt=0:1/FrameRate:tmax
                 Zpatch  = zeros(n_r,(n_r-1)*(n_l-2)+2);
                 i_patch = 1;
 
-                [y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0);
+                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0);
                 pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
                 pos_here = g_hereR*pos;
@@ -156,7 +158,7 @@ for tt=0:1/FrameRate:tmax
 
                 for ii=2:n_l
 
-                    [y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L);
+                    [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L);
                     pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
                     g_hereR  = g_hereR*[eye(3) [dx;0;0];0 0 0 1];
@@ -226,7 +228,7 @@ for tt=0:1/FrameRate:tmax
             i_patch = 1;
             
             %cross sectional shape Circular, Rectangular, and Ellipsoidal
-            [y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,j);
+            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,j);
             pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
             pos_here = g_here*pos;
@@ -246,7 +248,9 @@ for tt=0:1/FrameRate:tmax
             for ii=1:n_l-1
                 
                 %cross sectional shape Circular, Rectangular, and Ellipsoidal
-                [y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
+                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
+                %[y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
+
                 pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
                 
                 X   = Xs(ii);

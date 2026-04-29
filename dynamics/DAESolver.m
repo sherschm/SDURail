@@ -2,7 +2,7 @@
 function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,fixed_carriage)
     ndof = Linkage.ndof;
     ndof_mass = 6;
-    mass = 10.0;
+    mass = 1.0;
     I_mass=0.0001;
 
     n_beam  = ndof;
@@ -49,8 +49,8 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         elseif support == "fixed-fixed"
          %dg = T_L_init \ T_L;
          %err = piecewise_logmap(dg);
-         err = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
-
+         err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
+         err = [err_full(1:3);err_full(5:6)];
         elseif support == "pin-fixed"
          %dg = T_L_init \ T_L;
          %err = piecewise_logmap(dg);
@@ -175,11 +175,18 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         %J_end = J_full(end-5:end,:);
 
         if support == "fixed-fixed"
-            J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
-            J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
+            % J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
+            % J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
+            % 
+            % Jd_L_full = horzcat(Jd_full(end-5:end,:),zeros(6,n_mass));
+            % Jd_0_full = horzcat(Jd_full(1:6,:),zeros(6,n_mass));
 
-            Jd_L_full = horzcat(Jd_full(end-5:end,:),zeros(6,n_mass));
+            J_L_full = horzcat([J_full(end-5:end-3,:);J_full(end-1:end,:)],zeros(5,n_mass));
+            J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
+            
+            Jd_L_full = horzcat([Jd_full(end-5:end-3,:);Jd_full(end-1:end,:)],zeros(5,n_mass));
             Jd_0_full = horzcat(Jd_full(1:6,:),zeros(6,n_mass));
+
         elseif support == "pin-pin"
             %J_L_full = horzcat(J_full(end-2:end,:),zeros(3,n_mass));
             J_L_full = horzcat(J_end(end-2:end,:),zeros(3,n_mass));
@@ -192,7 +199,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
             J_L_full = horzcat(J_end(end-5:end,:),zeros(6,n_mass));
             J_0_full = horzcat(J_full(4:6,:),zeros(3,n_mass));
         end
-        
+
         % ----------------------------
         % ds/dq
         % ----------------------------
@@ -203,7 +210,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         % dφ/ds
         % ----------------------------
         dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, q), s);
-        
+           
         % ----------------------------
         % mass constraint Jacobian
         % ----------------------------
@@ -224,10 +231,29 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
             J_mass_corrected = J_mass_full(1:6,:);
             Jd_mass_corrected = Jd_mass_full(1:6,:);
         else
-            J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];% + dphi_ds * ds_dq'; %correction
-            %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+            %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];
+            J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
             Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)]; % + dphi_ds * ds_dq'; %correction
         end
+        
+        phi = carriage_constraint_err(Linkage, s, q);
+        
+        % constraint velocity
+        phi_dot = J_mass_corrected * qd;
+        eps = 1e-6;
+
+        q_next = q + eps * qd;
+        
+        s_next = ProjectS(Linkage, q_next(1:n_beam), q_next(n_beam+1:end));
+        
+        phi_next = carriage_constraint_err(Linkage, s_next, q_next);
+        
+        phi_dot_next = (phi_next - phi) / eps;
+        
+        Jd_qd = (phi_dot_next - phi_dot) / eps;
+
+        %disp(Jd_qd)
+            
 
         % ----------------------------
         % full constraint matrix
@@ -252,8 +278,13 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
 
         %F3 = err_pos;
         %F3 = J_c * qd;
-        %F3 = J_c * qddot + Jd_c*qd;
-        F3 = J_c * qddot + Jd_c*qd + alpha*err_vel + beta*err_pos;
+        F3 = J_c * qddot + Jd_c*qd+ [Jd_qd; zeros(nc-5,1)];
+        %F3 = J_c * qddot + [Jd_qd; Jd_L_full*qd ;Jd_0_full*qd ];
+        %F3 = J_c * qddot + [Jd_qd; Jd_L_full*qd ;Jd_0_full*qd ];
+
+        %F3 = J_c * qddot + Jd_c*qd; %+ alpha*err_vel + beta*err_pos;
+
+        %F3 = J_c * qddot + Jd_c*qd + alpha*err_vel + beta*err_pos;
        
         % if cond(J_c) > 1e6
         %     warning('J_c near singular at t=%g', t);
@@ -271,12 +302,20 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
 
     tspan = [0 tf];
     
-
     [y0_consistent, ydot0_consistent] = decic( ...
     @dae_fun, 0, ...
     y0, [true(n,1); true(n,1); false(nc,1)], ...
     ydot0, [false(2*n,1); true(nc,1)]);
-    
+    % 
+    % [y0_consistent, ydot0_consistent] = decic( ...
+    % @dae_fun, 0, ...
+    % y0, [true(n_beam,1); true(n_mass,1); false(n,1); false(nc,1)], ...
+    % ydot0, [false(2*n,1); true(nc,1)]);
+      [y0_consistent, ydot0_consistent] = decic( ...
+     @dae_fun, 0, ...
+     y0, [true(n_beam,1); false(n_mass,1); true(n_beam,1); false(n_mass,1); false(nc,1)], ...
+     ydot0, [false(2*n,1); true(nc,1)]);
+    % 
     % ----------------------------
     % ODE options with event function
     % ----------------------------
@@ -287,7 +326,6 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
     disp("Simulating...");
 
     [t,y] = ode15i(@dae_fun, [0 tf], y0_consistent, ydot0_consistent, opts);
-   
     
     % ----------------------------
     % unpack solution
