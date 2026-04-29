@@ -66,6 +66,10 @@ ydot0 = zeros(size(y0));
 
 [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 
+x_test = x0;
+x_test(7:9)=1;
+plotRail(RailLinkage,x_test);
+
 AnimateRail(RailLinkage, tvec_out, x_out)
 
 plotResults(tvec_out, x_out, dt, RailLinkage)
