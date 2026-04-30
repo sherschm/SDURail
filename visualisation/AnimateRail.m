@@ -36,18 +36,21 @@ FrameRate   = PlotParameters.FrameRateValue;
 if options.record
     v = VideoWriter(video_file, 'MPEG-4');
     v.FrameRate = FrameRate;
+    v.Quality   = 100;
     open(v);
 end
 
 %Plot options
 
 fh=figure(1);
-fh.Units='normalized';
+%fh.Units='normalized';
+fh.Units = 'pixels';
+fh.Position = [100 100 1920 1080];   % Full HD
 FigScale = PlotParameters.VideoResolution;
 FigScale(FigScale<0.1)=0.5;
 FigScale(FigScale>1)=1;
 FigLocation = (1-FigScale)/2;
-fh.OuterPosition=[FigLocation FigLocation FigScale FigScale];
+%fh.OuterPosition=[FigLocation FigLocation FigScale FigScale];
 
 set(gca,'CameraPosition',PlotParameters.CameraPosition,...
     'CameraTarget',PlotParameters.CameraTarget,...
@@ -77,7 +80,7 @@ set(gca,'FontSize',12)
 set(gcf, 'Renderer', 'OpenGL');
 
 %axis limits
-axis ([[-0.1 1.5*Linkage.VLinks.L] ...
+axis ([[-0.1 1.2*Linkage.VLinks.L] ...
         [-2*Linkage.VLinks.h{1}(0) 2*Linkage.VLinks.h{1}(0)] ...
         [-2*Linkage.VLinks.w{1}(0) 2*Linkage.VLinks.w{1}(0)]]);
 
@@ -317,7 +320,7 @@ for tt=0:1/FrameRate:tmax
             Ypatch(:,i_patch) = y_here';
             Zpatch(:,i_patch) = z_here';
 
-            patch(Xpatch,Ypatch,Zpatch,color,'EdgeColor','none','FaceAlpha',alpha);
+            patch(Xpatch,Ypatch,Zpatch,color,'EdgeColor','k','FaceAlpha',alpha);
              %plot3(x_here, y_here, z_here, 'k', 'LineWidth', 1.5);
 
             gf     = Linkage.VLinks(Linkage.LinkIndex(i)).gf{j};
@@ -329,8 +332,7 @@ for tt=0:1/FrameRate:tmax
             
         end
         for k = 1:n_r
-            plot3(edge_store(k,:,1), edge_store(k,:,2), edge_store(k,:,3), ...
-                  'k', 'LineWidth', 1);
+            %plot3(edge_store(k,:,1), edge_store(k,:,2), edge_store(k,:,3),'k', 'LineWidth', 1);
         end
         g_tip((i-1)*4+1:i*4,:) = g_here;
 

@@ -22,6 +22,7 @@ RailCarriage.I     = 0.0001; % Moment of inertia (assumes uniform & symmetrical 
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;
 
+
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
 s0 = 2.5; % initial position of carriage along rail
@@ -48,13 +49,14 @@ lambda0_guess = zeros(nc,1);
 y0 = [x0; lambda0_guess];
 ydot0 = zeros(size(y0));
 
-%Solve DAE
+%Slv
 [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,RailCarriage);
 
-%Plot results & animate rail
 plotResults(tvec_out, x_out, dt, RailLinkage)
+
 AnimateRail(RailLinkage, tvec_out, x_out)
 
 % plotq(RailLinkage,x_out(end,1:RailLinkage.ndof))
 % plotRail(RailLinkage,x_out(end,1:RailLinkage.ndof))
+% 
 % FwdKinematicsAtS(RailLinkage,x_out(end,:),s0)

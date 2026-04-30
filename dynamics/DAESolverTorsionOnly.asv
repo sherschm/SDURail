@@ -1,9 +1,7 @@
 
-function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,ydot0,nc,tf,dt,Carriage)
+function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,Carriage)
     ndof = Linkage.ndof;
     ndof_mass = 6;
-
-    % Carriage parameters
     mass = Carriage.mass;
     com_offset = Carriage.com_offset;
     I_mass=Carriage.I;
@@ -12,8 +10,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
     n_mass  = ndof_mass;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    %Baumgarte stabilisation parameters
-    t_baum = 0.1; %Baumgarte time-constants
+    t_baum = 0.1;
     alpha =    1/t_baum; %50.0;%0.0;%% damping
     beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
@@ -37,16 +34,8 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         end
     end
 
-   function err = fk_0_func(Xpos, T_0_init)
-        %Function that describes error between floating frame coordinates
-        %and fixed frame
-        T_0 =variable_expmap_g(Xpos(1:6));
-        err = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
-    end
-
     function err = fk_L_func(Linkage, Xpos, T_L_init, n_beam)
-        %Function that describes error between Rail end pose
-        %and fixed pose
+
         q_b = Xpos(1:n_beam);
         
         T_L_full = FwdKinematics(Linkage, q_b);
@@ -59,7 +48,15 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
          err = err_full(1);
 
     end
-   
+    
+    function err = fk_0_func(Xpos, T_0_init)
+        %Function that describes error between floating frame coordinates
+        %and fixed frame
+        T_0 =variable_expmap_g(Xpos(1:6));
+       
+        err = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
+    end
+    
     function F = dae_fun(t, y, ydot)
         q     = y(1:n);
         qd    = y(n+1:2*n);

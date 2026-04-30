@@ -10,7 +10,7 @@ function RailLink = makeRailLink()
     L = 5.415;
     %L = 25.415;
     Rho = 1000;
-    E = 6.9e8;
+    E = 6.9e7;
     Poi = 0.33;
     G =  E/(2*(1+Poi));
     Eta = 1e6;
@@ -49,7 +49,7 @@ function RailLink = makeRailLink()
     RailLink.Kj= [];
     RailLink.Dj= [];
     
-    RailLink.n_l= 25;
+    RailLink.n_l= 20;
     RailLink.n_r= 5; %should be 5 for rectangle, 9 for C-shaped X-sect
     RailLink.color= [0.9572 0.4854 0.8003];
     RailLink.alpha= 1;
