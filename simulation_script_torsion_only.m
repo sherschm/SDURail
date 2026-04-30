@@ -8,33 +8,13 @@ addpath('linkage')
 
 run("RailParameters.m")
 
+plotStrainBasis(RailLinkage)
+
 ndof = RailLinkage.ndof+6;
 q_b0 = zeros(RailLinkage.ndof,1);
 s0 = 2.5;
-%s0 = 12.5;
-tf = 2.22;%1.2; %
+tf = 5;%1.2; %
 dt = 0.001;
-
-%Plot strain basis functions
-X_vals = linspace(0,1,100);  % 100 points from 0 to 1
-Phi_all = [];
-for i = 1:length(X_vals)
-    Phi = Phi_LegendrePolynomial(X_vals(i), RailLinkage.CVRods{1}(2).Phi_dof, RailLinkage.CVRods{1}(2).Phi_odr);
-    Phi_all(:,:,i) = Phi;   % store each result
-end
-figure; hold on;
-
-for j = 1:size(Phi_all,2)
-    y = squeeze(Phi_all(1,j,:));
-    plot(X_vals, y);
-    y = squeeze(Phi_all(2,1,:));
-    plot(X_vals, y);
-end
-
-xlabel('X');
-ylabel('\Phi(1,j)');
-title('First row of Phi vs X');
-grid on;
 
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0);
 q_m0 = piecewise_logmap(g_s0);
@@ -66,17 +46,19 @@ lambda0_guess = zeros(nc,1);
 y0 = [x0; lambda0_guess];
 ydot0 = zeros(size(y0));
 
-[tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
+RailCarriage.mass       = 80000.0; % kg
+RailCarriage.com_offset = [0 1.5 0]; % %distance from body frame
+RailCarriage.I     = 0.0001; % Moment of inertia (assumes uniform & symmetrical about xyz for now)
+RailCarriage.fixed     = false;
 
-% x_test = x0;
-% x_test(7:9)=1;
-% plotRail(RailLinkage,x_out(end,:));
 
-AnimateRail(RailLinkage, tvec_out, x_out)
+[tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,support,RailCarriage);
 
 plotResults(tvec_out, x_out, dt, RailLinkage)
 
-plotq(RailLinkage,x_out(end,1:RailLinkage.ndof))
-plotRail(RailLinkage,x_out(end,1:RailLinkage.ndof))
+AnimateRail(RailLinkage, tvec_out, x_out)
 
-FwdKinematicsAtS(RailLinkage,x_out(end,:),s0)
+% plotq(RailLinkage,x_out(end,1:RailLinkage.ndof))
+% plotRail(RailLinkage,x_out(end,1:RailLinkage.ndof))
+% 
+% FwdKinematicsAtS(RailLinkage,x_out(end,:),s0)

@@ -76,7 +76,10 @@ set(gca,'FontSize',12)
 
 set(gcf, 'Renderer', 'OpenGL');
 
-axis ([PlotParameters.XLim PlotParameters.YLim PlotParameters.ZLim]);
+%axis limits
+axis ([[-0.1 1.5*Linkage.VLinks.L] ...
+        [-2*Linkage.VLinks.h{1}(0) 2*Linkage.VLinks.h{1}(0)] ...
+        [-2*Linkage.VLinks.w{1}(0) 2*Linkage.VLinks.w{1}(0)]]);
 
 drawnow
 
@@ -155,7 +158,7 @@ for tt=0:1/FrameRate:tmax
                 x_pre    = x_here;
                 y_pre    = y_here;
                 z_pre    = z_here;
-
+                
                 for ii=2:n_l
 
                     [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L);
@@ -191,6 +194,7 @@ for tt=0:1/FrameRate:tmax
                 Zpatch(:,i_patch) = z_here';
 
                 patch(Xpatch,Ypatch,Zpatch,color,'EdgeColor','none','FaceAlpha',alpha);
+                plot3(x_here, y_here, z_here, 'k', 'LineWidth', 1.5);
             else
                 CustomShapePlot(g_here);
             end
@@ -296,6 +300,16 @@ for tt=0:1/FrameRate:tmax
                 x_pre = x_here;
                 y_pre = y_here;
                 z_pre = z_here;
+
+                if ii == 1
+                    edge_store = zeros(n_r, n_l, 3); % store edge trajectories
+                    edge_store(:,1,2) = y;
+                    edge_store(:,1,3) = z;
+                end
+                
+                edge_store(:,ii+1,1) = x_here;
+                edge_store(:,ii+1,2) = y_here;
+                edge_store(:,ii+1,3) = z_here;
                 
             end
 
@@ -304,7 +318,8 @@ for tt=0:1/FrameRate:tmax
             Zpatch(:,i_patch) = z_here';
 
             patch(Xpatch,Ypatch,Zpatch,color,'EdgeColor','none','FaceAlpha',alpha);
-            
+             %plot3(x_here, y_here, z_here, 'k', 'LineWidth', 1.5);
+
             gf     = Linkage.VLinks(Linkage.LinkIndex(i)).gf{j};
             g_here = g_here*gf;
             
@@ -312,6 +327,10 @@ for tt=0:1/FrameRate:tmax
                 dof_start = dof_start+dof_here;
             end
             
+        end
+        for k = 1:n_r
+            plot3(edge_store(k,:,1), edge_store(k,:,2), edge_store(k,:,3), ...
+                  'k', 'LineWidth', 1);
         end
         g_tip((i-1)*4+1:i*4,:) = g_here;
 

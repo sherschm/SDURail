@@ -1,10 +1,10 @@
 
-function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,fixed_carriage)
+function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,Carriage)
     ndof = Linkage.ndof;
     ndof_mass = 6;
-    mass = 10000.0;
-    com_offset = [0 1 1]; %from body frame
-    I_mass=0.0001;
+    mass = Carriage.mass;
+    com_offset = Carriage.com_offset;
+    I_mass=Carriage.I;
 
     n_beam  = ndof;
     n_mass  = ndof_mass;
@@ -27,7 +27,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         q_mass = q(n_beam+1:n_beam+n_mass);
         
         err_full = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
-        if fixed_carriage == true
+        if Carriage.fixed == true
             err = err_full;
         else
             err = [err_full(1:3);err_full(5:6)];
@@ -192,7 +192,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         %fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass; 
         fk_mass_err = carriage_constraint_err(Linkage, s, q);
 
-        if fixed_carriage == true
+        if Carriage.fixed == true
             J_mass_corrected = J_mass_full(1:6,:);
             Jd_mass_corrected = Jd_mass_full(1:6,:);
         else

@@ -10,7 +10,7 @@ function RailLink = makeRailLink()
     L = 5.415;
     %L = 25.415;
     Rho = 1000;
-    E = 6.9e6;
+    E = 6.9e8;
     Poi = 0.33;
     G =  E/(2*(1+Poi));
     Eta = 1e6;
@@ -26,8 +26,8 @@ function RailLink = makeRailLink()
     tw = 0.05; %web thickness
     tf = 0.05; %flange thickness
    
-    %[M,cx] = CCrossSectProperties(L,Rho,h,w,tw,tf);
-     [M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for rectangular cross section
+    [M,cx] = CCrossSectProperties(L,Rho,h,w,tw,tf);
+     %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for rectangular cross section
     
     RailLink.ld{1}=L;
     RailLink.L= L;
