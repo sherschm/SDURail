@@ -1,65 +1,21 @@
 
-function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,ydot0,nc,tf,dt,Carriage)
-    ndof = Linkage.ndof;
-    ndof_mass = 6;
-
-    % Carriage parameters
+function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,Carriage)
     mass = Carriage.mass;
     com_offset = Carriage.com_offset;
     I_mass=Carriage.I;
 
-    n_beam  = ndof;
-    n_mass  = ndof_mass;
+    n_beam  = Linkage.ndof;
+    n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    %Baumgarte stabilisation parameters
-    t_baum = 0.1; %Baumgarte time-constants
-    alpha =    1/t_baum; %50.0;%0.0;%% damping
-    beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
+    %t_baum = 0.1;
+    %alpha =    1/t_baum; %50.0;%0.0;%% damping
+    %beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
-    T_full_init = FwdKinematics(Linkage, y0(1:ndof));
-    T_L_init = T_full_init(end-3:end, :);
-    T_0_init = T_full_init(1:4,:);
+    T_full_init = FwdKinematics(Linkage, y0(1:n_beam));
+    T_L_fixed = T_full_init(end-3:end, :);
+    T_0_fixed = T_full_init(1:4,:);
 
-    function err = carriage_constraint_err(Linkage, s, q)
-        % Split generalized coordinates
-        n_beam = Linkage.ndof;
-        n_mass = 6;
-        
-        q_b = q(1:n_beam);
-        q_mass = q(n_beam+1:n_beam+n_mass);
-        
-        err_full = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
-        if Carriage.fixed == true
-            err = err_full;
-        else
-            err = [err_full(1:3);err_full(5:6)];
-        end
-    end
-
-   function err = fk_0_func(Xpos, T_0_init)
-        %Function that describes error between floating frame coordinates
-        %and fixed frame
-        T_0 =variable_expmap_g(Xpos(1:6));
-        err = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
-    end
-
-    function err = fk_L_func(Linkage, Xpos, T_L_init, n_beam)
-        %Function that describes error between Rail end pose
-        %and fixed pose
-        q_b = Xpos(1:n_beam);
-        
-        T_L_full = FwdKinematics(Linkage, q_b);
-        T_L = T_L_full(end-3:end,:);
-        
-
-         %dg = T_L_init \ T_L;
-         %err = piecewise_logmap(dg);
-         err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
-         err = err_full(1);
-
-    end
-   
     function F = dae_fun(t, y, ydot)
         q     = y(1:n);
         qd    = y(n+1:2*n);
@@ -77,6 +33,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         
         qdd_b    = qddot(1:n_beam);
         qdd_mass = qddot(n_beam+1:n_beam+n_mass);
+
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
@@ -85,7 +42,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         % ----------------------------
         % Beam dynamics
         % ----------------------------
-        [ID,tau,e,dID_dq,Cb,Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+        [ID,tau,e,dID_dq,Cb,Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,qdd_b,[],[],[]);
         
         % ----------------------------
         % kinematics at s
@@ -99,12 +56,6 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         Mm = body_inertia(mass, I_body, com_offset);
         Cm = dinamico_coadj(qd_mass) * Mm;
         gm = -Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
-
-        % =================================================
-        % constraint wrappers
-        % =================================================
-        fk_L_wrapper = @(Xpos) fk_L_func(Linkage, Xpos, T_L_init, n_beam);
-        fk_0_wrapper = @(Xpos) fk_0_func(Xpos, T_0_init);
         
         % =================================================
         % Jacobians (requires AD or finite diff)
@@ -113,51 +64,24 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         J_full = Jacobian(Linkage,q_b);
         Jd_full = Jacobiandot_corrected(Linkage,q_b,qd_b);
         
-        T_full = FwdKinematics(Linkage,q_b);
-        T_tip = T_full(end-3:end,:);
-
-        J_end = dinamico_Adjoint(T_tip)*J_full(end-5:end,:);
+       % T_full = FwdKinematics(Linkage,q_b);
+        %T_tip = T_full(end-3:end,:);
 
         % J_L_full = horzcat(J_full(end-5:end,:),zeros(6,n_mass));
-        % J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
-        % 
-        % Jd_L_full = horzcat(Jd_full(end-5:end,:),zeros(6,n_mass));
-        % Jd_0_full = horzcat(Jd_full(1:6,:),zeros(6,n_mass));
-
         J_L_full = horzcat(J_full(end-5,:),zeros(1,n_mass));
         J_0_full = horzcat(J_full(1:6,:),zeros(6,n_mass));
         
+        % Jd_L_full = horzcat(Jd_full(end-5:end,:),zeros(6,n_mass));
         Jd_L_full = horzcat(Jd_full(end-5,:),zeros(1,n_mass));
         Jd_0_full = horzcat(Jd_full(1:6,:),zeros(6,n_mass));
-
-
-        % ----------------------------
-        % ds/dq
-        % ----------------------------
-        ds_dq = gradient_fd(@(vars) ProjectS(Linkage, ...
-                          vars(1:n_beam), vars(n_beam+1:end)), q);
-        
-        % ----------------------------
-        % dφ/ds
-        % ----------------------------
-        dphi_ds = derivative_fd(@(ss) carriage_constraint_err(Linkage, ss, q), s);
            
         % ----------------------------
         % mass constraint Jacobian
         % ----------------------------
-        %J_mass = jacobian_fd(fk_mass_wrapper, xpos);
-        %J_mass_full = J_mass + dphi_ds * ds_dq';
 
         J_mass_full = horzcat(JacobianAtS(Linkage, q_b,s),-eye(n_mass)); %fixes mass to point
-        
-
-        %disp(size(JacobianDotAtS(Linkage, q_b, qd_b,s)));
-        %disp(s)
         Jd_mass_full = horzcat(JacobianDotAtS(Linkage, q_b, qd_b,s),zeros(n_mass,n_mass)); %fixes mass to point
         
-        %fk_mass_err = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass; 
-        fk_mass_err = carriage_constraint_err(Linkage, s, q);
-
         if Carriage.fixed == true
             J_mass_corrected = J_mass_full(1:6,:);
             Jd_mass_corrected = Jd_mass_full(1:6,:);
@@ -166,25 +90,6 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
             J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)]; %+ dphi_ds * ds_dq'; %correction
             Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)]; % + dphi_ds * ds_dq'; %correction
         end
-        
-        phi = carriage_constraint_err(Linkage, s, q);
-        
-        % constraint velocity
-        phi_dot = J_mass_corrected * qd;
-        eps = 1e-6;
-
-        q_next = q + eps * qd;
-        
-        s_next = ProjectS(Linkage, q_next(1:n_beam), q_next(n_beam+1:end));
-        
-        phi_next = carriage_constraint_err(Linkage, s_next, q_next);
-        
-        phi_dot_next = (phi_next - phi) / eps;
-        
-        Jd_qd = (phi_dot_next - phi_dot) / eps;
-
-        %disp(Jd_qd)
-            
 
         % ----------------------------
         % full constraint matrix
@@ -197,18 +102,10 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
                Jd_L_full;
                Jd_0_full];
         
-        err_pos = [carriage_constraint_err(Linkage, s, q);% free to move along x
-                   fk_L_wrapper(q);
-                   fk_0_wrapper(q)];
-        
-        err_vel = J_c * qd;
-
         F1 = q_dot - qd;
-
-        %F2 = M_full * qddot - (g_full - C_full - K_full - J_c' * lambda) +[zeros(Linkage.ndof,1);1000*t;0*t;0*t;0.0;0;0];
         
         %Rail Dynamics!
-        F2 = Mb*qdd_b + ID - tau + J_c(:,1:n_beam)' * lambda;
+        F2 = ID - tau + J_c(:,1:n_beam)' * lambda;
 
         %carriage dynamics! (s
         F3 =  Mm*qdd_mass + Cm * qd_mass +gm + J_c(:,n_beam+1:n_beam+n_mass)' * lambda;% +[10000*t;0*t;0*t;0.0;0;0];
@@ -236,29 +133,17 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
             F3;
             F4];
     end
-
-    tspan = [0 tf];
-    
-    % [y0_consistent, ydot0_consistent] = decic( ...
-    % @dae_fun, 0, ...
-    % y0, [true(n,1); true(n,1); false(nc,1)], ...
-    % ydot0, [false(2*n,1); true(nc,1)]);
-    % 
-    % [y0_consistent, ydot0_consistent] = decic( ...
-    % @dae_fun, 0, ...
-    % y0, [true(n_beam,1); true(n_mass,1); false(n,1); false(nc,1)], ...
-    % ydot0, [false(2*n,1); true(nc,1)]);
+   
       [y0_consistent, ydot0_consistent] = decic( ...
              @dae_fun, 0, ...
              y0, [true(n_beam,1); true(n_mass,1); true(n_beam,1); true(n_mass,1); false(nc,1)], ...
              ydot0, [false(2*n,1); true(nc,1)]);
+
     % 
     % ----------------------------
     % ODE options with event function
     % ----------------------------
-    %opts = odeset('RelTol',1e-4,'AbsTol',1e-6, 'OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage));
     opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage));
-    %opts = odeset('RelTol',1e-6,'AbsTol',1e-8, 'OutputFcn', @(t,y,flag) showTime(t,y,flag, Linkage));
 
     disp("Simulating...");
 

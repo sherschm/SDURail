@@ -16,8 +16,8 @@ run("RailParameters.m")
 plotStrainBasis(RailLinkage)
 
 %define properties of carriage
-RailCarriage.mass       = 80000.0; % kg
-RailCarriage.com_offset = [0 1.5 0]; % %distance from body frame
+RailCarriage.mass       = 10000.0; % kg
+RailCarriage.com_offset = [0 1.0 0]; % %distance from body frame
 RailCarriage.I     = 0.0001; % Moment of inertia (assumes uniform & symmetrical about xyz for now)
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;

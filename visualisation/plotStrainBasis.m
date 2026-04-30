@@ -18,7 +18,7 @@ function plotStrainBasis(RailLinkage)
     
     xlabel('X');
     ylabel('\Phi(1,j)');
-    title('First row of Phi vs X');
+    title('Strain shape basis functions');
     grid on;
 
     % Save
