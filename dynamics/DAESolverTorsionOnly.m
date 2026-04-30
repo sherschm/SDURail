@@ -1,23 +1,20 @@
 
 function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,ydot0,nc,tf,dt,Carriage)
-    ndof = Linkage.ndof;
-    ndof_mass = 6;
-
     % Carriage parameters
     mass = Carriage.mass;
     com_offset = Carriage.com_offset;
-    I_mass=Carriage.I;
+    I_carriage = Carriage.I;
 
-    n_beam  = ndof;
-    n_mass  = ndof_mass;
+    n_beam  = Linkage.ndof;
+    n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    %Baumgarte stabilisation parameters
+    %Baumgarte stabilisation parameters 
     t_baum = 0.1; %Baumgarte time-constants
     alpha =    1/t_baum; %50.0;%0.0;%% damping
     beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
-    T_full_init = FwdKinematics(Linkage, y0(1:ndof));
+    T_full_init = FwdKinematics(Linkage, y0(1:n_beam));
     T_L_init = T_full_init(end-3:end, :);
     T_0_init = T_full_init(1:4,:);
 
@@ -52,7 +49,6 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         T_L_full = FwdKinematics(Linkage, q_b);
         T_L = T_L_full(end-3:end,:);
         
-
          %dg = T_L_init \ T_L;
          %err = piecewise_logmap(dg);
          err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
@@ -77,6 +73,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         
         qdd_b    = qddot(1:n_beam);
         qdd_mass = qddot(n_beam+1:n_beam+n_mass);
+
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
@@ -85,8 +82,10 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         % ----------------------------
         % Beam dynamics
         % ----------------------------
-        [ID,tau,e,dID_dq,Cb,Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
-        
+        %[ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = ...DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+
+        [ID, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,qdd_b,[],[],[]);
+
         % ----------------------------
         % kinematics at s
         % ----------------------------
@@ -95,7 +94,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         % ----------------------------
         % Carriage Dynamics
         % ---------------------------
-        I_body = diag([I_mass I_mass I_mass]);
+        I_body = diag([I_carriage I_carriage I_carriage]);
         Mm = body_inertia(mass, I_body, com_offset);
         Cm = dinamico_coadj(qd_mass) * Mm;
         gm = -Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
@@ -208,10 +207,11 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,
         %F2 = M_full * qddot - (g_full - C_full - K_full - J_c' * lambda) +[zeros(Linkage.ndof,1);1000*t;0*t;0*t;0.0;0;0];
         
         %Rail Dynamics!
-        F2 = Mb*qdd_b + ID - tau + J_c(:,1:n_beam)' * lambda;
+        %F2 = Mb*qdd_b + ID_no_Mqdd - tau + J_c(:,1:n_beam)' * lambda;
+        F2 = ID - tau + J_c(:,1:n_beam)' * lambda;
 
-        %carriage dynamics! (s
-        F3 =  Mm*qdd_mass + Cm * qd_mass +gm + J_c(:,n_beam+1:n_beam+n_mass)' * lambda;% +[10000*t;0*t;0*t;0.0;0;0];
+        %carriage dynamics!
+        F3 =  Mm*qdd_mass + Cm * qd_mass +gm + J_c(:,n_beam+1:n_beam+n_mass)' * lambda;
         
         %F4 = err_pos;
         %F4 = J_c * qd;
