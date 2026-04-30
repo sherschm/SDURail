@@ -11,7 +11,8 @@ run("RailParameters.m")
 ndof = RailLinkage.ndof+6;
 q_b0 = zeros(RailLinkage.ndof,1);
 s0 = 2.5;
-tf = 1.0;
+%s0 = 12.5;
+tf = 2.22;%1.2; %
 dt = 0.001;
 
 %Plot strain basis functions
@@ -57,6 +58,7 @@ end
 support = "fixed-fixed"; 
 %nc = nc_carriage + 12;
 nc = nc_carriage + 7;
+%nc = nc_carriage + 6;
 
 %[tvec_out, x_out, xdot_out] = Baumgarte(RailLinkage,x0,tf,dt,support);
 
@@ -66,10 +68,15 @@ ydot0 = zeros(size(y0));
 
 [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,y0,ydot0,nc,tf,dt,support,fixed_carriage);
 
-x_test = x0;
-x_test(7:9)=1;
-plotRail(RailLinkage,x_test);
+% x_test = x0;
+% x_test(7:9)=1;
+% plotRail(RailLinkage,x_out(end,:));
 
 AnimateRail(RailLinkage, tvec_out, x_out)
 
 plotResults(tvec_out, x_out, dt, RailLinkage)
+
+plotq(RailLinkage,x_out(end,1:RailLinkage.ndof))
+plotRail(RailLinkage,x_out(end,1:RailLinkage.ndof))
+
+FwdKinematicsAtS(RailLinkage,x_out(end,:),s0)

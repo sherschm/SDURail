@@ -2,8 +2,9 @@
 function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf,dt,support,fixed_carriage)
     ndof = Linkage.ndof;
     ndof_mass = 6;
-    mass = 10.0;
-    I_mass=0.01;
+    mass = 10000.0;
+    com_offset = [0 1 1]; %from body frame
+    I_mass=0.0001;
 
     n_beam  = ndof;
     n_mass  = ndof_mass;
@@ -97,7 +98,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         % ---------------------------
 
         I_body = diag([I_mass I_mass I_mass]);
-        Mm = body_inertia(mass, I_body, [0 0 0]);
+        Mm = body_inertia(mass, I_body, com_offset);
         
         Cm = dinamico_coadj(qd_mass) * Mm;
         
@@ -196,7 +197,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
             Jd_mass_corrected = Jd_mass_full(1:6,:);
         else
             %J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)];
-            J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)] + dphi_ds * ds_dq'; %correction
+            J_mass_corrected = [J_mass_full(1:3,:) ;J_mass_full(5:6,:)]; %+ dphi_ds * ds_dq'; %correction
             Jd_mass_corrected = [Jd_mass_full(1:3,:) ;Jd_mass_full(5:6,:)]; % + dphi_ds * ds_dq'; %correction
         end
         
@@ -238,23 +239,23 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
 
         F1 = q_dot - qd;
 
-        %F2 = M_full * qddot - (g_full - C_full - K_full - J_c' * lambda);
+        %F2 = M_full * qddot - (g_full - C_full - K_full - J_c' * lambda) +[zeros(Linkage.ndof,1);1000*t;0*t;0*t;0.0;0;0];
         
         %Rail Dynamics!
         F2 = Mb*qdd_b + ID - tau + J_c(:,1:n_beam)' * lambda;
 
         %carriage dynamics! (s
-        F3 =  Mm*qdd_mass + Cm * qd_mass - dinamico_Adjoint(ginv(T_here)) * mass * Linkage.G + J_c(:,n_beam+1:n_beam+n_mass)' * lambda +[100000*t;0;0;0.0;0;0];
-
+        F3 =  Mm*qdd_mass + Cm * qd_mass - Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G + J_c(:,n_beam+1:n_beam+n_mass)' * lambda;% +[10000*t;0*t;0*t;0.0;0;0];
+        
         %F4 = err_pos;
         %F4 = J_c * qd;
         %F4 = J_c * qddot + Jd_c*qd+ [Jd_qd; zeros(nc-5,1)];
         %F4 = J_c * qddot + [Jd_qd; Jd_L_full*qd ;Jd_0_full*qd ];
         %F4 = J_c * qddot + [Jd_qd; Jd_L_full*qd ;Jd_0_full*qd ];
 
-        %F4 = J_c * qddot + Jd_c*qd; %+ alpha*err_vel + beta*err_pos;
+        F4 = J_c * qddot + Jd_c*qd; %+ alpha*err_vel + beta*err_pos;
 
-        F4 = J_c * qddot + Jd_c*qd + alpha*err_vel + beta*err_pos;
+        %F4 = J_c * qddot + Jd_c*qd + alpha*err_vel + beta*err_pos;
        
         % if cond(J_c) > 1e6
         %     warning('J_c near singular at t=%g', t);
@@ -264,7 +265,10 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
         %     warning('M_full ill-conditioned at t=%g', t);
         % end
 
-        F = [F1;F2;F3;F4];
+        F = [F1;
+            F2;
+            F3;
+            F4];
     end
 
     tspan = [0 tf];
@@ -280,7 +284,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolver(Linkage,y0,ydot0,nc,tf
     % ydot0, [false(2*n,1); true(nc,1)]);
       [y0_consistent, ydot0_consistent] = decic( ...
              @dae_fun, 0, ...
-             y0, [true(n_beam,1); true(n_mass,1); false(n_beam,1); false(n_mass,1); false(nc,1)], ...
+             y0, [true(n_beam,1); true(n_mass,1); true(n_beam,1); true(n_mass,1); false(nc,1)], ...
              ydot0, [false(2*n,1); true(nc,1)]);
     % 
     % ----------------------------
