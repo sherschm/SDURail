@@ -1,4 +1,4 @@
-function Jd_out = JacobianDotAtS(Linkage, q, qd, s)
+function Jd_out = JacobiandotAtS(Linkage, q, qd, s)
 
 if isrow(q);  q  = q';  end
 if isrow(qd); qd = qd'; end
