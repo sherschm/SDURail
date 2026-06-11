@@ -1,13 +1,19 @@
 
+<<<<<<< HEAD:dynamics/DAESolverTorsionOnlyNEW.m
 function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,Carriage,x0,tf,dt)
+=======
+function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,y0,ydot0,nc,tf,dt,Carriage)
+    % Carriage parameters
+>>>>>>> ae7fd69e1a59f6ad5da0ea14aa0656d761382ebe:dynamics/DAESolverTorsionOnly.asv
     mass = Carriage.mass;
     com_offset = Carriage.com_offset;
-    I_mass=Carriage.I;
+    I_carriage = Carriage.I;
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
+<<<<<<< HEAD:dynamics/DAESolverTorsionOnlyNEW.m
     %number of carriage constraints (3 for pose, 2 for lateral position)
     if Carriage.fixed == true
         nc_carriage = 6;
@@ -19,6 +25,10 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,Car
     nc = nc_carriage + 7; % 6 constraints for rail floating frame, plus one more for x-rotation of other end
 
     t_baum = 0.1;
+=======
+    %Baumgarte stabilisation parameters 
+    t_baum = 0.1; %Baumgarte time-constants
+>>>>>>> ae7fd69e1a59f6ad5da0ea14aa0656d761382ebe:dynamics/DAESolverTorsionOnly.asv
     alpha =    1/t_baum; %50.0;%0.0;%% damping
     beta =   2/(t_baum^2) ; %100.0;%0.0;%% stiffness
     
@@ -26,6 +36,47 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,Car
     T_L_fixed = T_full_init(end-3:end, :);
     T_0_fixed = T_full_init(1:4,:);
 
+<<<<<<< HEAD:dynamics/DAESolverTorsionOnlyNEW.m
+=======
+    function err = carriage_constraint_err(Linkage, s, q)
+        % Split generalized coordinates
+        n_beam = Linkage.ndof;
+        n_mass = 6;
+        
+        q_b = q(1:n_beam);
+        q_mass = q(n_beam+1:n_beam+n_mass);
+        
+        err_full = piecewise_logmap(FwdKinematicsAtS(Linkage,q_b,s))-q_mass;
+        if Carriage.fixed == true
+            err = err_full;
+        else
+            err = [err_full(1:3);err_full(5:6)];
+        end
+    end
+
+   function err = fk_0_func(Xpos, T_0_init)
+        %Function that describes error between floating frame coordinates
+        %and fixed frame
+        T_0 =variable_expmap_g(Xpos(1:6));
+        err = piecewise_logmap(T_0_init) - piecewise_logmap(T_0);
+    end
+
+    function err = fk_L_func(Linkage, Xpos, T_L_init, n_beam)
+        %Function that describes error between Rail end pose
+        %and fixed pose
+        q_b = Xpos(1:n_beam);
+        
+        T_L_full = FwdKinematics(Linkage, q_b);
+        T_L = T_L_full(end-3:end,:);
+        
+         %dg = T_L_init \ T_L;
+         %err = piecewise_logmap(dg);
+         err_full = piecewise_logmap(T_L_init) - piecewise_logmap(T_L);
+         err = err_full(1);
+
+    end
+   
+>>>>>>> ae7fd69e1a59f6ad5da0ea14aa0656d761382ebe:dynamics/DAESolverTorsionOnly.asv
     function F = dae_fun(t, y, ydot)
         q     = y(1:n);
         qd    = y(n+1:2*n);
@@ -52,8 +103,15 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,Car
         % ----------------------------
         % Beam dynamics
         % ----------------------------
+<<<<<<< HEAD:dynamics/DAESolverTorsionOnlyNEW.m
         [ID,tau,e,dID_dq,Cb,Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,qdd_b,[],[],[]);
         
+=======
+        %[ID_no_M, tau, e, dID_dq, Cb, Mb] = ...DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+
+        [ID, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+
+>>>>>>> ae7fd69e1a59f6ad5da0ea14aa0656d761382ebe:dynamics/DAESolverTorsionOnly.asv
         % ----------------------------
         % kinematics at s
         % ----------------------------
@@ -62,7 +120,7 @@ function [tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(Linkage,Car
         % ----------------------------
         % Carriage Dynamics
         % ---------------------------
-        I_body = diag([I_mass I_mass I_mass]);
+        I_body = diag([I_carriage I_carriage I_carriage]);
         Mm = body_inertia(mass, I_body, com_offset);
         Cm = dinamico_coadj(qd_mass) * Mm;
         gm = -Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
