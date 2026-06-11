@@ -16,17 +16,17 @@ run("RailParameters.m")
 plotStrainBasis(RailLinkage)
 
 %define properties of carriage
-RailCarriage.mass       = 50000.0; % kg
-RailCarriage.com_offset = [0.0 10.0 10.0]; % %distance from body frame
-RailCarriage.I     = 0.0001; % Moment of inertia (assumes uniform & symmetrical about xyz for now)
+RailCarriage.mass       = 0.01;%0000.0; % kg
+RailCarriage.com_offset = [0.0 0.0 0.0]; % %distance from body frame
+RailCarriage.I     = 1*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;
 
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
 %s0 = 2.5; % initial position of carriage along rail
-s0 = RailLink.L/2-1.0;
-tf = 2.0; %simulation time
+s0 = RailLink.L/2+1.0;
+tf = 10.0; %simulation time
 dt = 0.001;
 
 % calculate the initial pose of the carriage frame
@@ -46,7 +46,8 @@ x0 = [q0;v0];
 plotResults(tvec_out, x_out, dt, RailLinkage)
 AnimateRail(RailLinkage, tvec_out, x_out)
 
-% plotq(RailLinkage,x_out(end,1:RailLinkage.ndof))
+ %plotq(RailLinkage,x_out(3000,1:RailLinkage.ndof))
+ %plotFrame(FwdKinematicsAtS(RailLinkage,x_out(3000,1:RailLinkage.ndof),2.7))
 % plotRail(RailLinkage,x_out(end,1:RailLinkage.ndof))
 % FwdKinematicsAtS(RailLinkage,x_out(end,:),s0)
 

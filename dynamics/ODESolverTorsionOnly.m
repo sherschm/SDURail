@@ -8,9 +8,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    t_baum = 0.2;
-    alpha =     1/t_baum; %50.0;%0.0;%% damping0.0;%
-    beta =  2/(t_baum^2) ; %100.0;%0.0;%% stiffness0.0;%
+    t_baum = 0.5;
+    alpha =  2/t_baum; %50.0;%0.0;%% damping  0.0;%0.0;%
+    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
     
     T_full_init = FwdKinematics(Linkage, x0(1:n_beam));
     T_L_fixed = T_full_init(end-3:end, :);
@@ -43,21 +43,26 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         % kinematics at s
         % ----------------------------
         T_here = FwdKinematicsAtS(Linkage, q_b, s);
-        
+
+        [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
+        [err_mass,J_mass_full,Jdqd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
+
         % ----------------------------
         % Carriage Dynamics
         % ---------------------------
+        Jm = eye(6);%SE3RightJacobianFromPose(q_mass);
         I_body = diag([I_carriage I_carriage I_carriage]);
-        Mm = body_inertia(mass, I_body, com_offset);
-        Cm = dinamico_coadj(qd_mass) * Mm;
-        gm = Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
+        Mm =  Jm'* body_inertia(mass, I_body, com_offset) * Jm ;
+        Cm = Jm'* dinamico_coadj(qd_mass) * Mm* Jm  ;
+        gm =  Jm'* Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
+
+        
+        %gm = dinamico_Adjoint(ginv(T_here)) *Mm* Linkage.G;
         
         % =================================================
         % Jacobians
         % =================================================
-        [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
 
-        [err_mass,J_mass_full,Jdqd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
         
         % ----------------------------
         % full constraint matrix
@@ -66,9 +71,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
                 J0;
                JL];
 
-        Jd_c = [Jdqd_mass_full*qd;
-                Jd0*qd; %; % free to move along x
-               JdL*qd];
+        Jd_c = [Jdqd_mass_full;
+                Jd0; %; % free to move along x
+               JdL];
 
         
          err_pos = [err_mass;
@@ -92,8 +97,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         
         f = g_full - C_full - K_full;
         
-        gamma = -Jd_c - alpha*err_vel - beta*err_pos;
-        
+        %gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
+        gamma =  - alpha*err_vel - beta*err_pos;
+
         nc = size(J_c,1);
         
         KKT = [M_full, J_c';
@@ -141,22 +147,6 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
     
     x_out = interp1(tvec, x_sol, tvec_out, 'linear');
     xdot_out = interp1(tvec, xdot_sol, tvec_out, 'linear');
-end
-
-function M = body_inertia(m, Inertia, com)
-
-    % skew-symmetric matrix of COM
-    px = [   0       -com(3)   com(2);
-           com(3)      0      -com(1);
-          -com(2)   com(1)      0    ];
-    
-    % composite inertia
-    Ic = Inertia + m * (px * px');
-    
-    % spatial inertia matrix (6x6)
-    M = [ Ic,      m * px;
-          m * px', m * eye(3) ];
-    
 end
 
 function status = showTime(t, y, flag, Linkage)
