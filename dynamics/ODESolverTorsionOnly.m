@@ -45,7 +45,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         T_here = FwdKinematicsAtS(Linkage, q_b, s);
 
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
+        %[err_mass,J_mass_full,Jdqd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
         [err_mass,J_mass_full,Jdqd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
+
 
         % ----------------------------
         % Carriage Dynamics

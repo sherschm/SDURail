@@ -41,7 +41,10 @@ x0 = [q0;v0];
 
 %Solve DAE
 %[tvec_out, x_out, xdot_out, lam_out] = DAESolverTorsionOnly(RailLinkage,RailCarriage,x0,tf,dt);
+%[tvec_out, x_out, xdot_out, lam_out] =DAESolverImplicit(RailLinkage,x0,tf,dt,RailCarriage);
+
 [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(RailLinkage,RailCarriage,x0,tf,dt);
+
 %Plot results & animate rail
 plotResults(tvec_out, x_out, dt, RailLinkage)
 AnimateRail(RailLinkage, tvec_out, x_out)
