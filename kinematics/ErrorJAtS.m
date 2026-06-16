@@ -1,5 +1,7 @@
 
 function [e_out,J_out,Jd_out] = ErrorJAtS(Linkage, Carriage, s, q, qd) 
+    S = [1 0 0 0 0 0;0 1 0 0 0 0;0 0 1 0 0 0; 0 0 0 0 1 0; 0 0 0 0 0 1];
+
     n_beam = Linkage.ndof;
     n_mass = 6;
     q_b = q(1:n_beam);
@@ -9,34 +11,54 @@ function [e_out,J_out,Jd_out] = ErrorJAtS(Linkage, Carriage, s, q, qd)
 
     % --- Forward kinematics 
     T_s = FwdKinematicsAtS(Linkage, q_b, s);
-    T_m = variable_expmap_g(q_mass); g_sm = ginv(T_s) * T_m;
+    T_m = variable_expmap_g(q_mass); 
+    g_sm = ginv(T_s) * T_m;
 
     % --- Jacobians in their natural frames
     J_s = JacobianAtS(Linkage, q_b, s);
-    Jd_s = JacobiandotAtS(Linkage, q_b, qd_b, s);
+    %Jd_s = JacobiandotAtS(Linkage, q_b, qd_b, s);
     J_m = SE3RightJacobianFromPose(q_mass); 
-    Jd_m = SE3RightJacobianDot(q_mass, qd_mass);
+    %Jd_m = SE3RightJacobianDot(q_mass, qd_mass);
 
     % --- Adjoint terms
     Ad_sm_inv = dinamico_Adjoint(ginv(g_sm)); 
     Ad_s_inv = dinamico_Adjoint(ginv(T_s));
-    e = piecewise_logmap(g_sm);
-    Jr = SE3RightJacobianFromPose(e);
-    Jr_inv = Jr\eye(6);
-    Vrel = -Ad_sm_inv*(J_s*qd_b) ... 
-          + Ad_s_inv*(J_m*qd_mass); 
-    edot = Jr_inv*Vrel;
-    Jrd = SE3RightJacobianDot(e,edot);
-    Jlogd = -Jr_inv*Jrd*Jr_inv;
-    
+
+    %Vrel = -Ad_sm_inv*(J_s*qd_b) ... 
+    %      + Ad_s_inv*(J_m*qd_mass); 
+    %edot = Jr_inv*Vrel;
+    %Jrd = SE3RightJacobianDot(e,edot);
+    %Jlogd = -Jr_inv*Jrd*Jr_inv;
+        
     % --- Consistent Jacobian of relative motion
-    %J = Jr_inv*[-Ad_sm_inv * J_s , Ad_s_inv * J_m];
-    J = Jr_inv*[-Ad_sm_inv * J_s , J_m];
+
+    T_s = FwdKinematicsAtS(Linkage,q_b,s);
+    T_m = variable_expmap_g(q_mass);
+    
+    e  = piecewise_logmap(ginv(T_s)*T_m);
+    Jr = SE3RightJacobianFromPose(e);
+    Jr_inv = Jr \ eye(6);
+    
+    J_s = JacobianAtS(Linkage,q_b,s);
+    J_m = SE3RightJacobianFromPose(q_mass);
+    
+    Ad_sm_inv = dinamico_Adjoint(ginv(ginv(T_s)*T_m));
+    Jb = - Ad_sm_inv * J_s ;
+    Jm =  J_m;
+
+    %dphi_ds = dfzcds(Linkage,q_b,s);   % 6×1
+    %dphi_ds = dphi_ds_FD(Linkage,q_b,q_mass,s);
+    %[ds_dqb, ds_dqm] = ProjectSJacobianFD(Linkage,q_b,q_mass,s);
+    J = Jr_inv * [Jb , Jm]; %+ dphi_ds * [ds_dqb ds_dqm];
+
+    %J = Jr_inv*[-J_s, Ad_sm_inv*J_m];
     %Jd = Jlogd * [-Ad_sm_inv * Jd_s , Ad_s_inv * Jd_m]; 
-    Jd = Jlogd * [-Ad_sm_inv * Jd_s ,  Jd_m]; 
-    J_out = [J(1:3,:) ;J(5:6,:)];
-    Jd_out = [Jd(1:3,:) ;Jd(5:6,:)];
-    e_out = [e(1:3); e(5:6)];
+    %Jd = Jlogd * [-Ad_sm_inv * Jd_s ,  Jd_m]; 
+    Jd = zeros(size(J));
+
+    J_out = S*J;
+    Jd_out = S*Jd;
+    e_out = S*e;
 end
 
 % function [e_out,J_out,Jd_out] = ErrorJAtS(Linkage, Carriage, s, q, qd)

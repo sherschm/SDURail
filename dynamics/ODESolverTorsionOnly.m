@@ -9,8 +9,8 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
     n       = n_beam + n_mass;    % number of position DOFs
     
     t_baum = 0.5;
-    alpha =  2/t_baum; %50.0;%0.0;%% damping  0.0;%0.0;%
-    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+    alpha =  0.0; %2/t_baum; %50.0;%0.0;%% damping  0.0;%
+    beta =   0.0; %1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
     
     T_full_init = FwdKinematics(Linkage, x0(1:n_beam));
     T_L_fixed = T_full_init(end-3:end, :);
@@ -30,8 +30,8 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        s = ProjectS(Linkage, q_b, q_mass);
-        
+        [s,~] = ProjectS(Linkage, q_b, q_mass, Linkage.VLinks(1).L/2);
+
         % ----------------------------
         % Beam dynamics
         % ----------------------------
@@ -50,7 +50,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         % ----------------------------
         % Carriage Dynamics
         % ---------------------------
-        Jm = eye(6);%SE3RightJacobianFromPose(q_mass);
+        %dinamico_Adjoint(ginv(T_here)*variable_expmap_g(q_mass));
+        Jm = eye(6);% J_mass_full;
+        %Jm = SE3RightJacobianFromPose(q_mass)\ eye(6);%
         I_body = diag([I_carriage I_carriage I_carriage]);
         Mm =  Jm'* body_inertia(mass, I_body, com_offset) * Jm ;
         Cm = Jm'* dinamico_coadj(qd_mass) * Mm* Jm  ;
@@ -97,8 +99,7 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         
         f = g_full - C_full - K_full;
         
-        %gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
-        gamma =  - alpha*err_vel - beta*err_pos;
+        gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
 
         nc = size(J_c,1);
         
@@ -166,7 +167,7 @@ function status = showTime(t, y, flag, Linkage)
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        s = ProjectS(Linkage, q_b, q_mass);
+        [s,~] = ProjectS(Linkage, q_b, q_mass, Linkage.VLinks(1).L/2);
         fprintf('s = %.3f\r', s);
     end
     
