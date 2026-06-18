@@ -1,16 +1,13 @@
 
 function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,tf,dt)
-    mass = Carriage.mass;
-    com_offset = Carriage.com_offset;
-    I_carriage=Carriage.I;
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    t_baum = 0.5;
-    alpha =  0.0; %2/t_baum; %50.0;%0.0;%% damping  0.0;%
-    beta =   0.0; %1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
+    t_baum = 0.05;
+    alpha = 0.0;% 2/t_baum; %50.0;%0.0;%% damping 0.0;%
+    beta =   0.0;% 1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%0.0;%
     
     T_full_init = FwdKinematics(Linkage, x0(1:n_beam));
     T_L_fixed = T_full_init(end-3:end, :);
@@ -37,43 +34,33 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         % ----------------------------
         [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
         
-        %[ID, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,qdd_b,[],[],[]);
-
         % ----------------------------
         % kinematics at s
         % ----------------------------
-        T_here = FwdKinematicsAtS(Linkage, q_b, s);
+        T_rs = FwdKinematicsAtS(Linkage, q_b, s);
+        T_m = variable_expmap_g(q_mass);
 
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
-        [err_mass,J_mass_full,Jdqd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
-
+        [err_mass,J_mass_full] = ErrorJAtS(Linkage, Carriage, s, q);
+        Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ;
+        %Jd_mass_full = zeros(size(J_mass_full))
         % ----------------------------
         % Carriage Dynamics
         % ---------------------------
-        %dinamico_Adjoint(ginv(T_here)*variable_expmap_g(q_mass));
-        Jm = eye(6);% J_mass_full;
-        %Jm = SE3RightJacobianFromPose(q_mass)\ eye(6);%
-        I_body = diag([I_carriage I_carriage I_carriage]);
-        Mm =  Jm'* body_inertia(mass, I_body, com_offset) * Jm ;
-        Cm = Jm'* dinamico_coadj(qd_mass) * Mm* Jm  ;
-        gm =  Jm'* Mm * dinamico_Adjoint(ginv(T_here)) * Linkage.G;
+        Mm =  body_inertia(Carriage)  ;
+        Cm =  dinamico_coadj(qd_mass) * Mm  ;
+        gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
 
-        
-        %gm = dinamico_Adjoint(ginv(T_here)) *Mm* Linkage.G;
-        
-        % =================================================
-        % Jacobians
-        % =================================================
+        %gm =  Mm * dinamico_Adjoint(T_here_m) * Linkage.G;
 
-        
-        % ----------------------------
-        % full constraint matrix
-        % ----------------------------
+
+        % Build Jacobians
+
         J_c = [J_mass_full; % free to move along x
                 J0;
                JL];
 
-        Jd_c = [Jdqd_mass_full;
+        Jd_c = [Jd_mass_full;
                 Jd0; %; % free to move along x
                JdL];
 

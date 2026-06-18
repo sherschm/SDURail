@@ -1,6 +1,6 @@
 function [ds_dqb, ds_dqm] = ProjectSJacobianFD(Linkage,q_b,q_mass,s)
 
-eps_fd = 1e-4;
+eps_fd = 1e-6;
 
 nqb = length(q_b);
 nqm = length(q_mass);

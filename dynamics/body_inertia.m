@@ -1,4 +1,8 @@
-function M = body_inertia(m, Inertia, com)
+function M = body_inertia(Carriage)
+
+    m = Carriage.mass;
+    com = Carriage.com_offset;
+    Inertia = Carriage.I_com;
 
     % skew-symmetric matrix of COM
     px = [   0       -com(3)   com(2);

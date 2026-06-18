@@ -340,11 +340,11 @@ for tt=0:1/FrameRate:tmax
     
     g_s = variable_expmap_g(q_mass);
     plotFrame(g_s)
-
+    
+    %plot projected tangent frame (aka where the carraiage should be)
     s_proj = ProjectS(Linkage,q,q_mass,Linkage.VLinks(1).L/2);
-
     p_proj = FwdKinematicsAtS(Linkage,q,s_proj);
-    plotFrame(p_proj);
+    plotFrame(p_proj,':');
 
     drawnow limitrate nocallbacks;
 
