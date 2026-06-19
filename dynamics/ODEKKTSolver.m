@@ -1,17 +1,14 @@
 
-function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,tf,dt)
+function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed)
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
+    %Baumgarte Stabilisation parameters
     t_baum = 0.1;
     alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
     beta =    1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%0.0;%
-    
-    T_full_init = FwdKinematics(Linkage, x0(1:n_beam));
-    T_L_fixed = T_full_init(end-3:end, :);
-    T_0_fixed = T_full_init(1:4,:);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -37,22 +34,19 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
         % ----------------------------
         % kinematics at s
         % ----------------------------
-        T_rs = FwdKinematicsAtS(Linkage, q_b, s);
+        %T_rs = FwdKinematicsAtS(Linkage, q_b, s);
         T_m = variable_expmap_g(q_mass);
 
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
         [err_mass,J_mass_full] = ErrorJAtS(Linkage, Carriage, s, q);
-        Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ;
+
+        Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ; %Ideally replace with analytical Jdot.
         %Jd_mass_full = zeros(size(J_mass_full))
-        % ----------------------------
+
         % Carriage Dynamics
-        % ---------------------------
         Mm =  body_inertia(Carriage)  ;
         Cm =  dinamico_coadj(qd_mass) * Mm  ;
         gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
-
-        %gm =  Mm * dinamico_Adjoint(T_here_m) * Linkage.G;
-
 
         % Build Jacobians
 
@@ -94,6 +88,7 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
                J_c, zeros(nc)];
         %disp('KKT condition number:')
         %disp(cond(KKT))
+
         rhs = [f;
                gamma];
         

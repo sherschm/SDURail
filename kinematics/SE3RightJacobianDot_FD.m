@@ -1,4 +1,4 @@
-function Jrd = SE3RightJacobianDot(xi, xidot)
+function Jrd = SE3RightJacobianDot_FD(xi, xidot)
 
 eps = 1e-8;
 
