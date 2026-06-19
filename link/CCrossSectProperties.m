@@ -1,8 +1,8 @@
 function [M,cx] = CCrossSectProperties(L,Rho,h_in,b_in,tw,tf)
- % h  = height as function of X1
- % b  = flange width
+ % h  = height as function of s
+ % b  = flange width as function of s
  % tw = web thickness
- % tf = flange thickness
+ % tf = flange 5thickness
 % ---- Section properties (constant) ----
 
 h=h_in(0.0);

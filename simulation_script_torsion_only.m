@@ -16,9 +16,9 @@ run("RailParameters.m")
 plotStrainBasis(RailLinkage)
 
 %define properties of carriage (just a 6DOF lumped mass)
-RailCarriage.mass       = 20000.0; % kg
-RailCarriage.com_offset = [0.0 3.0 0.0]; % %distance from body frame
-RailCarriage.I_com     = 10*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
+RailCarriage.mass       = 60000.0; % kg
+RailCarriage.com_offset = [0.0 10.0 0.0]; % %distance from body frame
+RailCarriage.I_com     = 100*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;
 
@@ -39,11 +39,15 @@ q0 = [q_b0;q_m0];
 v0 = zeros(ndof,1);
 x0 = [q0;v0];
 
+T_full_init = FwdKinematics(RailLinkage, x0(1:RailLinkage.ndof));
+T_L_fixed = T_full_init(end-3:end, :);
+T_0_fixed = T_full_init(1:4,:);
+
 %Solve DAE
 [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(RailLinkage,RailCarriage,x0,tf,dt);
 
 %Plot results & animate rail
-plotResults(tvec_out, x_out, dt, RailLinkage, RailCarriage)
+plotResults(tvec_out, x_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
 AnimateRail(RailLinkage, tvec_out, x_out)
 
 %plot constraint drift over time

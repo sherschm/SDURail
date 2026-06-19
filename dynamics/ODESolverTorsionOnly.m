@@ -5,9 +5,9 @@ function [tvec_out, x_out, xdot_out] = ODESolverTorsionOnly(Linkage,Carriage,x0,
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
-    t_baum = 0.05;
-    alpha = 0.0;% 2/t_baum; %50.0;%0.0;%% damping 0.0;%
-    beta =   0.0;% 1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%0.0;%
+    t_baum = 0.1;
+    alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+    beta =    1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%0.0;%
     
     T_full_init = FwdKinematics(Linkage, x0(1:n_beam));
     T_L_fixed = T_full_init(end-3:end, :);

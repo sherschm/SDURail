@@ -1,4 +1,4 @@
-function plotResults(tvec_out, x_sol, dt, Linkage, Carriage)
+function plotResults(tvec_out, x_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
 
     % ----------------------------
     % Split state
@@ -104,10 +104,47 @@ function plotResults(tvec_out, x_sol, dt, Linkage, Carriage)
     set(gcf, 'PaperPositionMode','auto');
     print('plots/response.png','-dpng','-r300');
 
+    % plot mass Constraint Violations
+    ndof_tot = Linkage.ndof+Carriage.ndof;
+    % Evaluate once to determine size of e_out
+    %disp(x_sol(1, 1:ndof_tot))
+    [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
+                 Linkage, Carriage, x_sol(1, 1:Linkage.ndof), zeros(Linkage.ndof,1), T_0_fixed, T_L_fixed);
+    e_out = [err0;errL];
+    n_e = length(e_out);
+    
+    E_out_all = zeros(n_e, N);
+    
+    % Loop over trajectory
+    for k = 1:N
+        [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
+                 Linkage, Carriage, x_sol(k, 1:Linkage.ndof), zeros(Linkage.ndof,1), T_0_fixed, T_L_fixed);
+        e_out = [err0;errL];
+        E_out_all(:,k) = e_out(:);
+    end
+    
+    % Time vector (assume unit timestep unless you have dt)
+    t = 1:N;
+    
+    % Plot each constraint violation
+    figure; hold on; grid on;
+    colors = lines(n_e);
+    
+    for i = 1:n_e
+        plot(t, E_out_all(i,:), 'LineWidth', 1.5, 'Color', colors(i,:));
+    end
+    
+    xlabel('Time step');
+    ylabel('Constraint violation (e\_out)');
+    title('Constraint Violations Over Time');
+    legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
+    print('plots/constraint_violation_ends.png','-dpng','-r300');
+    
+
     % plot Constraint Violations
     ndof_tot = Linkage.ndof+Carriage.ndof;
     % Evaluate once to determine size of e_out
-    disp(x_sol(1, 1:ndof_tot))
+
     [e_out, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot)');
     n_e = length(e_out);
     
@@ -134,5 +171,6 @@ function plotResults(tvec_out, x_sol, dt, Linkage, Carriage)
     ylabel('Constraint violation (e\_out)');
     title('Constraint Violations Over Time');
     legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
-    print('plots/constraint_violation.png','-dpng','-r300');
+    print('plots/constraint_violation_mass.png','-dpng','-r300');
+    
 end
