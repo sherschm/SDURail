@@ -22,9 +22,11 @@ git clone https://github.com/SoRoSim/SoRoSim.git
 ### 2. Clone SDURail
 
 Clone this repository into the Differentiable_SoRoSim directory of your SoRoSim installation:
+```text
 SoRoSim/
 └── Differentiable_SoRoSim/
     └── SDURail/
+```
 
 ## Configuration
 
