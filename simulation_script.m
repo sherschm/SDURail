@@ -16,8 +16,8 @@ run("RailParameters.m")
 plotStrainBasis(RailLinkage)
 
 %define properties of carriage (just a 6DOF lumped mass)
-RailCarriage.mass       = 60000.0; % kg
-RailCarriage.com_offset = [0.0 10.0 0.0]; % %distance from body frame
+RailCarriage.mass       = 10000.0; % kg
+RailCarriage.com_offset = [0.0 3.0 7.0]; % %distance from body frame
 RailCarriage.I_com     = 100*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;
@@ -26,8 +26,8 @@ ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2;%-1.0;
-tf = 7.0; %simulation time
+s0 = RailLink.L/2+1.0;
+tf = 8.0; %simulation time
 dt = 0.005;
 % calculate the initial pose of the carriage frame
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0); %SE(3)

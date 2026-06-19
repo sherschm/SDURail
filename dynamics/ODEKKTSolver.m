@@ -8,7 +8,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     %Baumgarte Stabilisation parameters
     t_baum = 0.1;
     alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-    beta =    1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%0.0;%
+    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -31,12 +31,11 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % ----------------------------
         [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
         
-        % ----------------------------
-        % kinematics at s
-        % ----------------------------
+        % kinematics
         %T_rs = FwdKinematicsAtS(Linkage, q_b, s);
         T_m = variable_expmap_g(q_mass);
-
+        
+        %Compute constraint errors & constraint Jacobians
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
         [err_mass,J_mass_full] = ErrorJAtS(Linkage, Carriage, s, q);
 
@@ -47,9 +46,8 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         Mm =  body_inertia(Carriage)  ;
         Cm =  dinamico_coadj(qd_mass) * Mm  ;
         gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
-
-        % Build Jacobians
-
+        
+        % Build full constraint Jacobians
         J_c = [J_mass_full; % free to move along x
                 J0;
                JL];
@@ -59,12 +57,14 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
                JdL];
 
         
-         err_pos = [err_mass;
+        err_pos = [err_mass;
                     err0;
                     errL];
         
         err_vel = J_c * qd;
         
+        %Build dynamics terms
+       
         M_full = zeros(n,n);
         M_full(1:n_beam,1:n_beam) = Mb;
         M_full(n_beam+1:end,n_beam+1:end) = Mm;
@@ -84,6 +84,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
         nc = size(J_c,1);
         
+        %Build KKT Matrix
         KKT = [M_full, J_c';
                J_c, zeros(nc)];
         %disp('KKT condition number:')

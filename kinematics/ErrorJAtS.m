@@ -26,7 +26,7 @@ function [e_out,J_out] = ErrorJAtS(Linkage, Carriage, s, q)
     T_s = FwdKinematicsAtS(Linkage,q_b,s);
     T_m = variable_expmap_g(q_mass);
     
-    e  = piecewise_logmap(ginv(T_s)*T_m);
+    e  = piecewise_logmap(g_sm);
     Jr = SE3RightJacobianFromPose(e);
     Jr_inv = Jr \ eye(6);
     
