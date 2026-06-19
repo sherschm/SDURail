@@ -1,5 +1,6 @@
 %Function that calculates the derivative of the jacobian with respect to
-%time (Jd) at every significant point (24.05.2021)
+%time (Jd) at every significant point. 
+% Modified by SH from SoRoSim to work with DifferentiableSoRoSim
 
 function Jd = Jacobiandot_corrected(Linkage,q,qd,i_here,j_here) %i_here is link index, j_here is division (0 for joint)
 
