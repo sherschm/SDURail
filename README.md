@@ -50,8 +50,9 @@ simulation_script.m
 
 ## Output
 
-The solution is plotted in the plots/ folder. This includes:
+The solution is plotted in the plots/ folder, and an animation called Dynamics.mp4 is created.
 
+![SDURail Simulation](RadialRail.gif)
 
 
 
