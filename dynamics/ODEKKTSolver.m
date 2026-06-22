@@ -6,9 +6,15 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     n       = n_beam + n_mass;    % number of position DOFs
     
     %Baumgarte Stabilisation parameters
-    t_baum = 0.1;
-    alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+    t_baum = 0.05;
+    %alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+    %beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
+    
+    alpha_terms =  [2*(2/t_baum)*ones(1,5) (2/t_baum)*ones(1,12)];
+    beta_terms = [5*(1/(t_baum^2))*ones(1,5) (1/(t_baum^2))*ones(1,12)];
+
+    alpha = diag(alpha_terms);
+    beta = diag(beta_terms);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -30,16 +36,19 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % Beam dynamics
         % ----------------------------
         [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
-        
+
+        %Mb = GeneralizedMassMatrix_corrected(Linkage,q_b);
+        %Mb = GeneralizedMassMatrix(Linkage,q_b);
+
         % kinematics
         %T_rs = FwdKinematicsAtS(Linkage, q_b, s);
         T_m = variable_expmap_g(q_mass);
         
         %Compute constraint errors & constraint Jacobians
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
-        [err_mass,J_mass_full] = ErrorJAtS(Linkage, Carriage, s, q);
+        [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
 
-        Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ; %Ideally replace with analytical Jdot.
+        %Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ; %Ideally replace with analytical Jdot.
         %Jd_mass_full = zeros(size(J_mass_full))
 
         % Carriage Dynamics

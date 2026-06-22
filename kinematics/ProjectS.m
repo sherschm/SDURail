@@ -75,7 +75,7 @@
 % end
 % 
 function [s,L] = ProjectS(Linkage, q_b, q_c, s_prev)
-    maxIter = 5;
+    maxIter = 10;
 
     L = Linkage.VLinks(1).L;
 
@@ -103,9 +103,9 @@ function [s,L] = ProjectS(Linkage, q_b, q_c, s_prev)
         s = max(0,min(L,s));
 
        % if abs(g) < tol
-%             converged = true;
-%             break;
-%         end
+        %             converged = true;
+        %             break;
+        %         end
     end
 
 end
