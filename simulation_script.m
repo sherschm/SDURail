@@ -8,6 +8,7 @@ addpath('kinematics')
 addpath('visualisation')
 addpath('link')
 addpath('linkage')
+addpath('controllers')
 
 %import properties of deformable Rail
 run("RailParameters.m")
@@ -26,8 +27,8 @@ ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2+1.0;
-tf = 8.0; %simulation time
+s0 = RailLink.L/2;%+1.0;
+tf = 20.0; %simulation time
 dt = 0.005;
 % calculate the initial pose of the carriage frame
 g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0); %SE(3)
@@ -43,9 +44,15 @@ T_full_init = FwdKinematics(RailLinkage, x0(1:RailLinkage.ndof));
 T_L_fixed = T_full_init(end-3:end, :);
 T_0_fixed = T_full_init(1:4,:);
 
+%controller parameters 
+PD_controller.s_cmd = 1.5;
+PD_controller.sd_cmd = 0.0;
+PD_controller.kp = 10000;
+PD_controller.kd = 15000;
+
 %Solve DAE
 [tvec_out, x_out, xdot_out] = ODEKKTSolver(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed);
 
 %Plot results & animate rail
 plotResults(tvec_out, x_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
-AnimateRail(RailLinkage, tvec_out, x_out)
+AnimateRail(RailLinkage, tvec_out, x_out, PD_controller)
