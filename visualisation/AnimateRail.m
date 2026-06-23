@@ -1,9 +1,10 @@
-function AnimateRail(Linkage, t, x, options)
+function AnimateRail(Linkage, t, x, ctrl, options)
 
 arguments
     Linkage
     t
     x
+    ctrl
     % Options
     options.video_name = "Dynamics"
     options.video_path = "."
@@ -338,6 +339,7 @@ for tt=0:1/FrameRate:tmax
 
     end
     
+    %plot carriage interface frame
     g_s = variable_expmap_g(q_mass);
     plotFrame(g_s)
     
@@ -345,6 +347,10 @@ for tt=0:1/FrameRate:tmax
     s_proj = ProjectS(Linkage,q,q_mass,Linkage.VLinks(1).L/2);
     p_proj = FwdKinematicsAtS(Linkage,q,s_proj);
     plotFrame(p_proj,':');
+
+    %plot commanded carriage frame
+    p_cmd = FwdKinematicsAtS(Linkage,q,ctrl.s_cmd);
+    plotFrame(p_cmd, ':', 'r');
 
     drawnow limitrate nocallbacks;
 

@@ -1,11 +1,16 @@
 
-function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed)
+function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller)
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
     n       = n_beam + n_mass;    % number of position DOFs
     
     %Baumgarte Stabilisation parameters
+
+    t_baum = 0.2;
+    alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+
     t_baum = 0.05;
     %alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
     %beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
@@ -87,12 +92,23 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         
         K_full = zeros(n,1);
         
-        f = g_full - C_full - K_full;
+        % Control term
+        nu = 1;
+        Ix = [0;0;0;1;0;0];
+        Binb = [-JacobianAtS(Linkage,q_b,s)'*Ix ];
+        Binm = [Ix ];
+        B_full = [Binb;Binm];
+
+        % PD controller!
+        % example PD + geometry-based term
+        u = PD_carriage_control(Linkage, s, q, qd, controller);
+
+        f = g_full - C_full - K_full + B_full*u;
         
         gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
 
         nc = size(J_c,1);
-        
+
         %Build KKT Matrix
         KKT = [M_full, J_c';
                J_c, zeros(nc)];
