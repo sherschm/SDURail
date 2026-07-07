@@ -1,4 +1,4 @@
-function plotResults(tvec_out, x_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
+function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
 
     % ----------------------------
     % Split state
@@ -118,7 +118,7 @@ function plotResults(tvec_out, x_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixe
     % Loop over trajectory
     for k = 1:N
         [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
-                 Linkage, Carriage, x_sol(k, 1:Linkage.ndof), zeros(Linkage.ndof,1), T_0_fixed, T_L_fixed);
+                 Linkage, Carriage, x_sol(k, 1:Linkage.ndof), xd_sol(k, 1:Linkage.ndof), T_0_fixed, T_L_fixed);
         e_out = [err0;errL];
         E_out_all(:,k) = e_out(:);
     end
@@ -145,14 +145,14 @@ function plotResults(tvec_out, x_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixe
     ndof_tot = Linkage.ndof+Carriage.ndof;
     % Evaluate once to determine size of e_out
 
-    [e_out, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot)');
+    [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
     n_e = length(e_out);
     
     E_out_all = zeros(n_e, N);
     
     % Loop over trajectory
     for k = 1:N
-        [e_out, ~] = ErrorJAtS(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)');
+        [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
         E_out_all(:,k) = e_out(:);
     end
     

@@ -1,0 +1,3 @@
+[submodule "floating_beam"]
+	path = floating_beam
+	url = https://github.com/yhpark64/floating_beam.git

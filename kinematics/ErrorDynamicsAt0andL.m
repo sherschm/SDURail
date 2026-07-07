@@ -45,7 +45,7 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     % Time derivative of BODY Jacobian
     % Must be consistent with Jacobian()
     % ----------------------------
-    Jd_full = Jacobiandot_corrected(Linkage, q_b, qd_b);
+    Jd_full = Jacobiandot(Linkage, q_b, qd_b);
 
     Jd0 = [Jd_full(1:6,:), zeros(6, Carriage.ndof)];
     JdL = [Jd_full(end-5:end,:), zeros(6, Carriage.ndof)];
