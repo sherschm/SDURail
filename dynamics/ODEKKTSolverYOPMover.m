@@ -20,6 +20,9 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolverYOPMover(Linkage,Carriage,Mov
 
     alpha = diag(alpha_terms);
     beta = diag(beta_terms);
+    
+   % alpha = diag(zeros());
+    %beta = diag(beta_terms);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -35,7 +38,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolverYOPMover(Linkage,Carriage,Mov
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        [s,~] = ProjectS(Linkage, q_b, q_mover, Linkage.VLinks(1).L/2);
+        [s,~] = ProjectS_YOP(Linkage, q_b, q_mover, Linkage.VLinks(1).L/2);
         
         % PD controller!
         % example PD + geometry-based term
@@ -174,7 +177,7 @@ function status = showTime(t, y, flag, Linkage)
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        [s,~] = ProjectS(Linkage, q_b, q_mover, Linkage.VLinks(1).L/2);
+        [s,~] = ProjectS_YOP(Linkage, q_b, q_mover, Linkage.VLinks(1).L/2);
         fprintf('s = %.3f\r', s);
     end
     

@@ -14,7 +14,7 @@ function [e_out,J_out,Jd_out] = ErrorJAtS(Linkage, Carriage, s, q, qd)
     q_mass = q(n_beam+1:n_beam+n_mass);
     qd_b = qd(1:n_beam);
     qd_mass = qd(n_beam+1:n_beam+n_mass);
-
+    
     % --- Forward kinematics 
     T_s = FwdKinematicsAtS(Linkage, q_b, s);
     [T_m,Jm,Jmd] = variable_expmap_gTgTgd(q_mass,qd_mass);
