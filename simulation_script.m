@@ -9,6 +9,7 @@ addpath('visualisation')
 addpath('link')
 addpath('linkage')
 addpath('controllers')
+addpath('floating_beam')
 
 %import properties of deformable Rail
 run("RailParameters.m")
@@ -17,7 +18,7 @@ run("RailParameters.m")
 plotStrainBasis(RailLinkage)
 
 %define properties of carriage (just a 6DOF lumped mass)
-RailCarriage.mass       = 10000.0; % kg
+RailCarriage.mass       = 100.0; % kg
 RailCarriage.com_offset = [0.0 5.0 0.0]; % %distance from body frame
 RailCarriage.I_com     = 10*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
 RailCarriage.fixed     = false;
@@ -32,7 +33,7 @@ s0 = RailLink.L/2;%+1.0;
 tf = 20.0; %simulation time
 dt = 0.005;
 
-tf = 100; %simulation time
+tf = 10; %simulation time
 dt = 0.02;
 
 % calculate the initial pose of the carriage frame
@@ -52,8 +53,8 @@ T_0_fixed = T_full_init(1:4,:);
 %controller parameters 
 PD_controller.s_cmd = 1.5; 
 PD_controller.sd_cmd = 0.0;
-PD_controller.kp = 10000;
-PD_controller.kd = 15000;
+PD_controller.kp = 10000;%0.0;%
+PD_controller.kd = 15000;%0.0;%
 
 %Solve DAE
 [tvec_out, x_out, xdot_out] = ODEKKTSolver(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
