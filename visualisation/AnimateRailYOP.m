@@ -1,4 +1,4 @@
-function AnimateRailYOP(Linkage, Mover, t, x, ctrl, options)
+function AnimateRailYOP(Linkage, Mover, t, x, ctrl,twebb,tflange, options)
 
 arguments
     Linkage
@@ -6,6 +6,8 @@ arguments
     t
     x
     ctrl
+    twebb
+    tflange
     % Options
     options.video_name = "Dynamics"
     options.video_path = "."
@@ -123,24 +125,13 @@ for tt=0:1/FrameRate:tmax
     
     % Flexible deformation in body frame
     nodes_body = 0.001*Mover.femodel.Mesh.Nodes + ...
-                 0.1*[Ux';Uy';Uz'];
-
+                 0.01*[Ux';Uy';Uz'];
     % Rigid motion
     R = computeRotationMatrix(q_mover);
     p = q_mover(1:3);
-    
     nodes_world = R*nodes_body + repmat(p,1,size(nodes_body,2));
-    %pdegplot(nodes_world,Mover.femodel.Mesh.Elements);
-    %hold on
-    %pdeplot3D(nodes_world,Mover.femodel.Mesh.Elements,'FaceAlpha',0.2);
     h = pdeplot3D(nodes_world,Mover.femodel.Mesh.Elements);
     
-    disp(class(h))
-    disp(h.Visible)
-
-    %plot3(0,0,0,'ro','MarkerSize',20,'LineWidth',5);
-   % hold(gca,'on')
-
     set(gca,...
     'CameraPosition',PlotParameters.CameraPosition,...
     'CameraTarget',PlotParameters.CameraTarget,...
@@ -199,7 +190,7 @@ for tt=0:1/FrameRate:tmax
                 Zpatch  = zeros(n_r,(n_r-1)*(n_l-2)+2);
                 i_patch = 1;
 
-                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0);
+                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,twebb,tflange);
                 pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
                 pos_here = g_hereR*pos;
@@ -218,7 +209,7 @@ for tt=0:1/FrameRate:tmax
                 
                 for ii=2:n_l
 
-                    [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L);
+                    [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L,twebb,tflange);
                     pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
                     g_hereR  = g_hereR*[eye(3) [dx;0;0];0 0 0 1];
@@ -289,7 +280,7 @@ for tt=0:1/FrameRate:tmax
             i_patch = 1;
             
             %cross sectional shape Circular, Rectangular, and Ellipsoidal
-            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,j);
+            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,twebb,tflange,j);
             pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
             pos_here = g_here*pos;
@@ -309,7 +300,7 @@ for tt=0:1/FrameRate:tmax
             for ii=1:n_l-1
                 
                 %cross sectional shape Circular, Rectangular, and Ellipsoidal
-                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
+                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),twebb,tflange,j);
                 %[y,z] = computeBoundaryYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
 
                 pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
@@ -407,7 +398,7 @@ for tt=0:1/FrameRate:tmax
     %plotFrame(p_proj,':');
 
     %plot commanded carriage frame
-    p_cmd = FwdKinematicsAtS(Linkage,q,ctrl.s_cmd);
+    %p_cmd = FwdKinematicsAtS(Linkage,q,ctrl.s_cmd);
     %plotFrame(p_cmd, ':', 'r');
 
     drawnow limitrate nocallbacks;

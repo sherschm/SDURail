@@ -25,16 +25,14 @@ RailCarriage.I_com     = 10*eye(3); % Moment of inertia (assumes uniform & symme
 RailCarriage.fixed     = false;
 RailCarriage.ndof = 6;
 
-ndof = RailLinkage.ndof+7; %7 for the YOP payload
+ndof = RailLinkage.ndof+7; %7 for the YOP payload CORRECT!!
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
 s0 = RailLink.L/2;%+1.0;
 
-tf = 20.0; %simulation time
-dt = 0.005;
 
-tf = 1.0;%10; %simulation time
+tf = 2.0;%10; %simulation time
 dt = 0.02;
 
 % calculate the initial pose of the carriage frame
@@ -55,8 +53,8 @@ T_0_fixed = T_full_init(1:4,:);
 %controller parameters 
 PD_controller.s_cmd = 1.5; 
 PD_controller.sd_cmd = 0.0;
-PD_controller.kp = 10000;%0.0;%
-PD_controller.kd = 15000;%0.0;%
+PD_controller.kp = 1000;%0.0;%
+PD_controller.kd = 1500;%0.0;%
 
 Mover.femodel = femodel;
 Mover.origins = origins;
@@ -71,6 +69,6 @@ Mover.rom = rom;
 
 %Plot results & animate rail
 plotResultsYOP(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
-AnimateRailYOP(RailLinkage, Mover, tvec_out, x_out, PD_controller)
+AnimateRailYOP(RailLinkage, Mover, tvec_out, x_out, PD_controller,twebb,tflange)
 %AnimateRailOnly(RailLinkage, tvec_out, x_out, PD_controller)
 

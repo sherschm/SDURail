@@ -1,4 +1,4 @@
-function plotq(Linkage,q)
+function plotRail(Linkage,q,twebb,tflange)
 
 if nargin==1
     q=zeros(Linkage.ndof,1);
@@ -99,7 +99,7 @@ for i=1:N
             Zpatch  = zeros(n_r,(n_r-1)*(n_l-2)+2);
             i_patch = 1;
 
-            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0);
+            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,twebb,tflange);
             pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
             pos_here = g_hereR*pos;
@@ -119,7 +119,7 @@ for i=1:N
 
             for ii=2:n_l
 
-                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L);
+                [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xr(ii)/L,twebb,tflange);
                 pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
 
                 g_hereR  = g_hereR*[eye(3) [dx;0;0];0 0 0 1];
@@ -189,7 +189,7 @@ for i=1:N
         i_patch = 1;
         
         %cross sectional shape Circular, Rectangular, and Ellipsoidal
-        [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,j);
+        [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),0,twebb,tflange,j);
         pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
         
         pos_here = g_here*pos;
@@ -208,7 +208,7 @@ for i=1:N
         
         for ii=1:n_l-1
             %cross sectional shape Circular, Rectangular, and Ellipsoidal
-            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),j);
+            [y,z] = computeBoundaryCBeamYZ(Linkage.VLinks(Linkage.LinkIndex(i)),Xs(ii+1),twebb,tflange,j);
             pos  = [zeros(1,n_r);y;z;ones(1,n_r)]; %homogeneous positions in local frame 4xn_r
             
             X = Xs(ii);

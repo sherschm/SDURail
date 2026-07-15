@@ -1,4 +1,4 @@
-function RailLink = makeRailLink()
+function RailLink = makeRailLink(twebb,tflange)
     RailLink = SorosimLink('empty'); %create an empty class element
     
     %To create a rigid link
@@ -9,24 +9,25 @@ function RailLink = makeRailLink()
     CS = 'R'; %'C' for circular, 'R' for circular, 'E' for circular
     L = 5.415;
     %L = 25.415;
-    Rho = 7850;
-    E = 1e8;
+    Rho = 2700;
+    E = 6.9e10;
     Poi = 0.33;
     G =  E/(2*(1+Poi));
     Eta = 1e6;
-    %h = @(X1)0.05;
-    %w = @(X1)0.005;
-    %r = @(X1)0.03; %function of normalzied X. X1 in [0 1]
-    
+
     %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for circular cross section
     
-    %C-section properties
-    h  = @(X1)0.776; %height as function of X1
-    w  = @(X1)1.140; %flange width
-    tw = 0.05; %web thickness
-    tf = 0.05; %flange thickness
+    %C-section properties FROM LSP CAD
+    % h  = @(X1)0.776; %height as function of X1
+    % w  = @(X1)1.140; %flange width
+    % twebb = 0.05; %web thickness
+    % tflange = 0.05; %flange thickness
+    
+    %C-section properties smaller example
+    h  = @(X1)0.08; %height as function of X1
+    w  = @(X1)0.1; %flange width
    
-    [M,cx] = CCrossSectProperties(L,Rho,h,w,tw,tf);
+    [M,cx] = CCrossSectProperties(L,Rho,h,w,twebb,tflange);
      %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for rectangular cross section
     
     RailLink.ld{1}=L;
@@ -48,7 +49,7 @@ function RailLink = makeRailLink()
     RailLink.G=G;
     RailLink.Kj= [];
     RailLink.Dj= [];
-    
+       
     RailLink.n_l= 20;
     RailLink.n_r= 5; %should be 5 for rectangle, 9 for C-shaped X-sect
     RailLink.color= [0.9572 0.4854 0.8003];
@@ -57,8 +58,9 @@ function RailLink = makeRailLink()
     RailLink.PlotFn= @(g)CustomShapePlot(g);
     RailLink.Lscale= 0.0947;
 end
-
-RailLink = makeRailLink();
+twebb = 0.003;
+tflange= 0.003;
+RailLink = makeRailLink(twebb,tflange);
 %Now make full linkage object
 RailLinkage = SorosimLinkage(RailLink);
 
