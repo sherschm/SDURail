@@ -4,7 +4,7 @@ function dqse3dqm = Screw2EulerJacobian(q)
     %theta = q(4:6);
     r = q(1:3);
     Rm = computeRotationMatrix(q);
-    T_floating = [Rm r;0 0 0 1];
+    T_floating = [Rm r(:);0 0 0 1];
     
     q_se3 = piecewise_logmap(T_floating);
 

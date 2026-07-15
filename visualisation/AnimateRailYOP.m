@@ -1,7 +1,8 @@
-function AnimateRail(Linkage, t, x, ctrl, options)
+function AnimateRailYOP(Linkage, Mover, t, x, ctrl, options)
 
 arguments
     Linkage
+    Mover
     t
     x
     ctrl
@@ -87,15 +88,67 @@ axis ([[-0.1 1.2*Linkage.VLinks.L] ...
 
 drawnow
 
+%instantiate mesh plot
+nodes0 = Mover.femodel.Mesh.Nodes';
+% Use only corner nodes of tetrahedra
+tet = Mover.femodel.Mesh.Elements(1:4,:)';
+TR = triangulation(tet,nodes0);
+F = freeBoundary(TR);
+
+axis equal
+hold on
+
+set(gca,'XLimMode','manual')
+set(gca,'YLimMode','manual')
+set(gca,'ZLimMode','manual')
+
 
 for tt=0:1/FrameRate:tmax
     cla
-    %delete(findobj('type', 'patch'));
-    title(strcat('t= ',num2str(tt)))
-   
     xtt = interp1(t,x,tt);
     q     = xtt(1:Linkage.ndof)';
-    q_mover = xtt(Linkage.ndof+1:Linkage.ndof+6)';
+    q_mover = xtt(Linkage.ndof+1:Linkage.ndof+7)'; %CORRECT WITH YOP Ndofs!
+
+    %plot Mover
+    g_s = [computeRotationMatrix(q_mover) q_mover(1:3);0 0 0 1];
+    plotFrame(g_s)
+    hold on
+    delta = q_mover(7); %CORRECT THIS
+    
+    u = Mover.Psi*delta;
+    
+    Ux = u(1:3:end);
+    Uy = u(2:3:end);
+    Uz = u(3:3:end);
+    
+    % Flexible deformation in body frame
+    nodes_body = 0.001*Mover.femodel.Mesh.Nodes + ...
+                 0.1*[Ux';Uy';Uz'];
+
+    % Rigid motion
+    R = computeRotationMatrix(q_mover);
+    p = q_mover(1:3);
+    
+    nodes_world = R*nodes_body + repmat(p,1,size(nodes_body,2));
+    %pdegplot(nodes_world,Mover.femodel.Mesh.Elements);
+    %hold on
+    %pdeplot3D(nodes_world,Mover.femodel.Mesh.Elements,'FaceAlpha',0.2);
+    h = pdeplot3D(nodes_world,Mover.femodel.Mesh.Elements);
+    
+    disp(class(h))
+    disp(h.Visible)
+
+    %plot3(0,0,0,'ro','MarkerSize',20,'LineWidth',5);
+   % hold(gca,'on')
+
+    set(gca,...
+    'CameraPosition',PlotParameters.CameraPosition,...
+    'CameraTarget',PlotParameters.CameraTarget,...
+    'CameraUpVector',PlotParameters.CameraUpVector)
+
+    %disp(ishold(gca))
+    %delete(findobj('type', 'patch'));
+    title(strcat('t= ',num2str(tt)))
 
     dof_start = 1;
     g_tip    = repmat(eye(4),N,1);
@@ -320,10 +373,18 @@ for tt=0:1/FrameRate:tmax
             Xpatch(:,i_patch) = x_here';
             Ypatch(:,i_patch) = y_here';
             Zpatch(:,i_patch) = z_here';
+            
+            axis equal
+            axis ([[-0.1 1.2*Linkage.VLinks.L] ...
+                [-2*Linkage.VLinks.h{1}(0) 2*Linkage.VLinks.h{1}(0)] ...
+                [-2*Linkage.VLinks.w{1}(0) 2*Linkage.VLinks.w{1}(0)]]);
+            set(gca,'XLimMode','manual')
+            set(gca,'YLimMode','manual')
+            set(gca,'ZLimMode','manual')
 
             patch(Xpatch,Ypatch,Zpatch,color,'EdgeColor','k','FaceAlpha',alpha);
              %plot3(x_here, y_here, z_here, 'k', 'LineWidth', 1.5);
-
+            
             gf     = Linkage.VLinks(Linkage.LinkIndex(i)).gf{j};
             g_here = g_here*gf;
             
@@ -339,19 +400,15 @@ for tt=0:1/FrameRate:tmax
 
     end
     
-    %plot carriage interface frame
-    g_s = [computeRotationMatrix(q_mover) q_mover(1:3);0 0 0 1];
 
-    plotFrame(g_s)
-    
     %plot projected tangent frame (aka where the carraiage should be)
     s_proj = ProjectS_YOP(Linkage,q,q_mover,Linkage.VLinks(1).L/2);
     p_proj = FwdKinematicsAtS(Linkage,q,s_proj);
-    plotFrame(p_proj,':');
+    %plotFrame(p_proj,':');
 
     %plot commanded carriage frame
     p_cmd = FwdKinematicsAtS(Linkage,q,ctrl.s_cmd);
-    plotFrame(p_cmd, ':', 'r');
+    %plotFrame(p_cmd, ':', 'r');
 
     drawnow limitrate nocallbacks;
 

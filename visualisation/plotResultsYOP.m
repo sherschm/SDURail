@@ -1,10 +1,10 @@
-function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
+function plotResultsYOP(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
+    close all;
+    n_mover = 7; %CORRECT THIS!
+    ndof_tot = Linkage.ndof+n_mover;
 
-    % ----------------------------
-    % Split state
-    % ----------------------------
     q_beam_full = x_sol(:, 1:Linkage.ndof);
-    q_mass_full = x_sol(:, Linkage.ndof+1:Linkage.ndof+6);
+    q_mass_full = x_sol(:, Linkage.ndof+1:ndof_tot);
 
     N = length(tvec_out);
 
@@ -24,11 +24,11 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
         qm = q_mass_full(i,:)';
 
         % Project s
-        s(i) = ProjectS(Linkage, qb, qm, Linkage.VLinks(1).L/2);  
+        s(i) = ProjectS_YOP(Linkage, qb, qm, Linkage.VLinks(1).L/2);  
         % (replace with your equivalent of project_s_newton if different)
 
         % Compute transform
-        T = variable_expmap_g(qm);
+        T = [computeRotationMatrix(qm) qm(1:3);0 0 0 1];
 
         x_mass(i) = T(1,4);
         y_mass(i) = T(2,4);
@@ -105,7 +105,6 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
     print('plots/response.png','-dpng','-r300');
 
     % plot mass Constraint Violations
-    ndof_tot = Linkage.ndof+Carriage.ndof;
     % Evaluate once to determine size of e_out
     %disp(x_sol(1, 1:ndof_tot))
     [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
@@ -142,17 +141,16 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
     
 
     % plot Constraint Violations
-    ndof_tot = Linkage.ndof+Carriage.ndof;
     % Evaluate once to determine size of e_out
 
-    [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
+    [e_out, ~, ~] = ErrorJAtS_YOP(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot), xd_sol(1, 1:ndof_tot));
     n_e = length(e_out);
     
     E_out_all = zeros(n_e, N);
     
     % Loop over trajectory
     for k = 1:N
-        [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+        [e_out, ~, ~] = ErrorJAtS_YOP(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
         E_out_all(:,k) = e_out(:);
     end
     

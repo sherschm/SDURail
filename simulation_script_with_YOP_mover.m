@@ -55,8 +55,8 @@ T_0_fixed = T_full_init(1:4,:);
 %controller parameters 
 PD_controller.s_cmd = 1.5; 
 PD_controller.sd_cmd = 0.0;
-PD_controller.kp = 0.0;%10000;%
-PD_controller.kd = 0.0;%15000;%
+PD_controller.kp = 10000;%0.0;%
+PD_controller.kd = 15000;%0.0;%
 
 Mover.femodel = femodel;
 Mover.origins = origins;
@@ -71,4 +71,6 @@ Mover.rom = rom;
 
 %Plot results & animate rail
 plotResultsYOP(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
-AnimateRailYOP(RailLinkage, tvec_out, x_out, PD_controller)
+AnimateRailYOP(RailLinkage, Mover, tvec_out, x_out, PD_controller)
+%AnimateRailOnly(RailLinkage, tvec_out, x_out, PD_controller)
+
