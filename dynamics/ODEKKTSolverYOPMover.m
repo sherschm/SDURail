@@ -42,7 +42,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolverYOPMover(Linkage,Carriage,Mov
         
         % PD controller!
         % example PD + geometry-based term
-        u = PD_carriage_control(Linkage, s, q, qd, controller);
+        u = PD_carriage_control_YOP(Linkage, s, q, qd, controller);
         u_mover = [u;0;0;0;0;0];%
         % ----------------------------
         % Beam dynamics

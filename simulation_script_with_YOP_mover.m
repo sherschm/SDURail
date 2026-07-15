@@ -32,7 +32,7 @@ q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
 s0 = RailLink.L/2;%+1.0;
 
 
-tf = 2.0;%10; %simulation time
+tf = 5.0;%10; %simulation time
 dt = 0.02;
 
 % calculate the initial pose of the carriage frame
@@ -53,8 +53,8 @@ T_0_fixed = T_full_init(1:4,:);
 %controller parameters 
 PD_controller.s_cmd = 1.5; 
 PD_controller.sd_cmd = 0.0;
-PD_controller.kp = 1000;%0.0;%
-PD_controller.kd = 1500;%0.0;%
+PD_controller.kp = 10;%0.0;%
+PD_controller.kd = 15;%0.0;%
 
 Mover.femodel = femodel;
 Mover.origins = origins;

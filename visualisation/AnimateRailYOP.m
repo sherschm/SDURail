@@ -114,7 +114,9 @@ for tt=0:1/FrameRate:tmax
     %plot Mover
     g_s = [computeRotationMatrix(q_mover) q_mover(1:3);0 0 0 1];
     plotFrame(g_s)
+
     hold on
+
     delta = q_mover(7); %CORRECT THIS
     
     u = Mover.Psi*delta;
@@ -125,11 +127,15 @@ for tt=0:1/FrameRate:tmax
     
     % Flexible deformation in body frame
     nodes_body = 0.001*Mover.femodel.Mesh.Nodes + ...
-                 0.01*[Ux';Uy';Uz'];
+                 0.1*[Ux';Uy';Uz'];
     % Rigid motion
     R = computeRotationMatrix(q_mover);
     p = q_mover(1:3);
-    nodes_world = R*nodes_body + repmat(p,1,size(nodes_body,2));
+
+    offset = 0.001*Mover.femodel.BoundaryConditions.StructuralBCAssignments.Reference';
+
+    nodes_world = R*nodes_body + repmat(p-offset,1,size(nodes_body,2));
+
     h = pdeplot3D(nodes_world,Mover.femodel.Mesh.Elements);
     
     set(gca,...
@@ -139,7 +145,7 @@ for tt=0:1/FrameRate:tmax
 
     %disp(ishold(gca))
     %delete(findobj('type', 'patch'));
-    title(strcat('t= ',num2str(tt)))
+    title(strcat('t= ',num2str(round(tt))))
 
     dof_start = 1;
     g_tip    = repmat(eye(4),N,1);
