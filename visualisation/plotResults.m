@@ -60,6 +60,13 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
 
     saveas(gcf, fullfile('plots','mass_response.png'));
 
+    figure;
+
+    plot(tvec_out, z_mass, 'DisplayName','z (m)', 'LineWidth', 2);
+    xlabel('Time (s)');
+    ylabel('Position (m)');
+    saveas(gcf, fullfile('plots','mass_response_z_only.png'));
+    
     % ----------------------------
     % Plot s derivative
     % ----------------------------

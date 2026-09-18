@@ -10,7 +10,7 @@ function RailLink = makeRailLink()
     L = 5.415;
     %L = 25.415;
     Rho = 7850;
-    E = 1e8;
+    E = 200e9;
     Poi = 0.33;
     G =  E/(2*(1+Poi));
     Eta = 1e6;
@@ -60,5 +60,6 @@ end
 
 RailLink = makeRailLink();
 %Now make full linkage object
+
 RailLinkage = SorosimLinkage(RailLink);
 

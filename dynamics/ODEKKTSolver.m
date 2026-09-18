@@ -7,19 +7,19 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     
     %Baumgarte Stabilisation parameters
 
-    t_baum = 0.2;
-    alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-    beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+    % t_baum = 0.2;
+    % alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+    % beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
 
-    t_baum = 0.05;
-    %alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-    %beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
+    t_baum = 0.03;
+    alpha =  0.0; %2/t_baum; %50.0;%0.0;%% damping 0.0;%
+    beta =   0.0; %1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
     
-    alpha_terms =  [2*(2/t_baum)*ones(1,5) (2/t_baum)*ones(1,12)];
-    beta_terms = [5*(1/(t_baum^2))*ones(1,5) (1/(t_baum^2))*ones(1,12)];
+    % alpha_terms =  [2*(2/t_baum)*ones(1,5) (2/t_baum)*ones(1,12)];
+    % beta_terms = [5*(1/(t_baum^2))*ones(1,5) (1/(t_baum^2))*ones(1,12)];
 
-    alpha = diag(alpha_terms);
-    beta = diag(beta_terms);
+    % alpha = diag(alpha_terms);
+    % beta = diag(beta_terms);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -57,10 +57,12 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         %Jd_mass_full = zeros(size(J_mass_full))
 
         % Carriage Dynamics
-        Mm =  body_inertia(Carriage)  ;
-        Cm =  dinamico_coadj(qd_mass) * Mm  ;
-        gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
-        
+        %Mm =  GeneralizedMassMatrix(Carriage,q_mass);
+        %Cm =  dinamico_coadj(qd_mass) * Mm  ;
+        %gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
+
+        [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
+
         % Build full constraint Jacobians
         J_c = [J_mass_full; % free to move along x
                 J0;
@@ -84,11 +86,11 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         M_full(n_beam+1:end,n_beam+1:end) = Mm;
         
         C_full = zeros(n,1);
-        C_full(n_beam+1:end) = Cm*qd_mass;
+        %C_full(n_beam+1:end) = Cm*qd_mass;
         
         g_full = zeros(n,1);
         g_full(1:n_beam) = -ID_no_Mqdd + tau;
-        g_full(n_beam+1:end) = gm;
+        g_full(n_beam+1:end) = -ID_no_Mqddm;
         
         K_full = zeros(n,1);
         
@@ -101,8 +103,9 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
         % PD controller!
         % example PD + geometry-based term
-        u = PD_carriage_control(Linkage, s, q, qd, controller);
-
+        %u = PD_carriage_control(Linkage, s, q, qd, controller);
+        u = 10000;
+        %u=0.0;
         f = g_full - C_full - K_full + B_full*u;
         
         gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
