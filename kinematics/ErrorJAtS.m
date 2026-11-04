@@ -17,7 +17,17 @@ function [e_out,J_out,Jd_out] = ErrorJAtS(Linkage, Carriage, s, q, qd)
 
     % --- Forward kinematics 
     T_s = FwdKinematicsAtS(Linkage, q_b, s);
-    [T_m,Jm,Jmd] = variable_expmap_gTgTgd(q_mass,qd_mass);
+    [T_m,Jm_WRONG,Jmd_WRONG] = variable_expmap_gTgTgd(q_mass,qd_mass);
+
+    Jm = zeros(6,6);
+    Jm(1:3,1:3) = Jm_WRONG(1:3,1:3)';
+    Jm(4:6,4:6) = Jm_WRONG(4:6,4:6)';
+    Jm(4:6,1:3) = Jm_WRONG(4:6,1:3)';
+
+    Jmd = zeros(6,6);
+    Jmd(1:3,1:3) = Jmd_WRONG(1:3,1:3)';
+    Jmd(4:6,4:6) = Jmd_WRONG(4:6,4:6)';
+    Jmd(4:6,1:3) = Jmd_WRONG(4:6,1:3)';
 
     %T_m = variable_expmap_g(q_mass); 
     g_sm = ginv(T_s) * T_m;
