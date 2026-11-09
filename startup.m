@@ -260,9 +260,10 @@ clear variables
 restoredefaultpath
 addpath(genpath('../Basic_functions'))
 addpath('../Custom')
-addpath('../SorosimLink_files')
-addpath(genpath('../SorosimRod_files'))
-addpath(genpath('../SorosimLinkage_files')) %include subfolders
+addpath('SorosimLink_files')
+
+addpath(genpath('SorosimRod_files')) %Note, this is in the SDU folder. We needed to add functions for the C-cross section rail.
+addpath(genpath('SorosimLinkage_files')) %include subfolders
 addpath('../SorosimContact_files')
 addpath('noGUI')
 

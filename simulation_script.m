@@ -6,7 +6,7 @@ addpath('dynamics')
 addpath('helper_functions')
 addpath('kinematics')
 addpath('visualisation')
-addpath('link')
+addpath('link_parameters')
 addpath('controllers')
 
 %import properties of deformable Rail
@@ -14,7 +14,7 @@ run("RailParameters.m")
 run("CarriageParameters.m")
 
 % plot the chosen strain shape functions
-plotStrainBasis(RailLinkage)
+%plotStrainBasis(RailLinkage)
 
 %define properties of carriage (just a 6DOF lumped mass)
 
@@ -29,12 +29,12 @@ ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2+0.2;%+1.0;
+s0 = RailLink.L/2;%+0.2;%+1.0;
 
 tf = 5.0; %simulation time
 dt = 0.005;
 
-tf = 1; %simulation time
+tf = 0.9; %simulation time
 dt = 0.005;
 
 % calculate the initial pose of the carriage frame
@@ -60,10 +60,12 @@ PD_controller.kp = 0;
 PD_controller.kd = 0;
 
 q_guess = q0;
-q_equil = FindEquilibrium( ...
+q_equil = FindEquilibriumFixed( ...
                     RailLinkage,RailCarriage, ...
-                    s0,q_guess, ...
-                    T_0_fixed, T_L_fixed)
+                    s0+3,q_guess, ...
+                    T_0_fixed, T_L_fixed);
+
+[s0_new,~] = ProjectS(RailLinkage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end),s0);
 
 plotq(RailLinkage,q_equil(1:RailLinkage.ndof))
 x0 = [q_equil;zeros(ndof,1)];
@@ -75,3 +77,38 @@ x0 = [q_equil;zeros(ndof,1)];
 
 plotResults(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
 AnimateRail(RailLinkage, RailCarriage, tvec_out, x_out, PD_controller)
+
+%s_range = RailCarriage.VLinks(1).L/2:1:5.4;
+
+s_range = 0.0:0.1:RailLinkage.VLinks(1).L;
+q_equil_prev = q_guess;
+q_def_z = zeros(length(s_range),1);
+for i = 1:length(s_range)
+    g_s = FwdKinematicsAtS(RailLinkage,q_b0,s_range(i)); %SE(3)
+    q_m0 = piecewise_logmap(g_s); % carriage coordinates (in tangent space of origin)
+
+    %define the initial system state (position and vel)
+    q0 = [q_b0;q_m0];
+
+    s = s_range(i);
+
+    q_equil_full = FindEquilibriumFixed( ...
+        RailLinkage, RailCarriage, ...
+        s, q_equil_prev, ...
+        T_0_fixed, T_L_fixed);
+
+    q_carriage_se3_here = q_equil_full(end-5:end);
+
+    T_carriage_here = variable_expmap_g(q_carriage_se3_here);
+
+    q_def_z(i) = T_carriage_here(3,4);
+    q_equil_prev = q_equil_full;
+end
+plot(s_range,q_def_z)
+xlabel('Position along Rail (s)');
+ylabel('Rail Deformation (m)');
+
+%plotq(RailLinkage,q_equil_prev(1:RailLinkage.ndof))
+
+
+[test1,test2,test3] = ErrorJAtS_both_ends(RailLinkage, RailCarriage, s0, q0, q0) ;

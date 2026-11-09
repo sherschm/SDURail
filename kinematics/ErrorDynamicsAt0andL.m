@@ -16,8 +16,6 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     %dT_0 = ginv(T_0) * T_0_fixed;
     %dT_L = ginv(T_L) * T_L_fixed;
     dT_0 = ginv(T_0_fixed) * T_0;
-
-    %dT_0 = ginv(T_0) * T_0_fixed;
     dT_L = ginv(T_L_fixed) * T_L;
 
     err0 = piecewise_logmap(dT_0);
@@ -38,8 +36,8 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     %JrL_inv = JrL \ eye(6);
     %J0 = Jr0_inv*J0;
     %JL = JrL_inv*J0;
-    %J0 = -Jr0_inv*dinamico_Adjoint(ginv(dT_0))*J0;
-    %JL = -JrL_inv*dinamico_Adjoint(ginv(dT_L))*JL;
+    %J0 = Jr0_inv*dinamico_Adjoint(ginv(dT_0))*J0;
+    %JL = JrL_inv*dinamico_Adjoint(ginv(dT_L))*JL;
 
     % ----------------------------
     % Time derivative of BODY Jacobian
@@ -71,9 +69,9 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     % Fixed-sliding
     S_slide = [1 0 0 0 0 0; ...
     0 1 0 0 0 0; ...
-    0 0 1 0 0 0%; ...
-    %0 0 0 0 1 0; ...
-    %0 0 0 0 0 1
+    0 0 1 0 0 0; ...
+    0 0 0 0 1 0; ...
+    0 0 0 0 0 1
     ];
     S = eye(6);
     err0 = S*err0;

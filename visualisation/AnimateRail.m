@@ -81,8 +81,8 @@ set(gcf, 'Renderer', 'OpenGL');
 
 %axis limits
 axis ([[-0.1 1.2*Linkage.VLinks.L] ...
-        [-5*Linkage.VLinks.h{1}(0) 5*Linkage.VLinks.h{1}(0)] ...
-        [-5*Linkage.VLinks.w{1}(0) 5*Linkage.VLinks.w{1}(0)]]);
+        [-20*Linkage.VLinks.h{1}(0) 20*Linkage.VLinks.h{1}(0)] ...
+        [-20*Linkage.VLinks.w{1}(0) 20*Linkage.VLinks.w{1}(0)]]);
 
 drawnow
 

@@ -1,0 +1,192 @@
+%Function that calculates the generalized mass matrix for dynamic analysis
+%(24.05.2021)
+
+function M = GeneralizedMassMatrix(Linkage,q)
+
+
+if isrow(q)
+    q=q';
+end
+
+ndof      = Linkage.ndof;
+N         = Linkage.N;
+g_ini     = Linkage.g_ini; %initial configuration of all link wrt its previous link
+iLpre     = Linkage.iLpre;
+g_Ltip    = repmat(eye(4),N,1);
+J_Ltip    = repmat(zeros(6,ndof),N,1);
+M         = zeros(ndof,ndof);
+dof_start = 1; %starting dof of current piece
+i_sig_nj  = 1; %significant point except at joint
+
+for i = 1:N
+    
+    if iLpre(i)>0
+        g_here       = g_Ltip((iLpre(i)-1)*4+1:iLpre(i)*4,:)*g_ini((i-1)*4+1:i*4,:);
+        Ad_g_ini_inv = dinamico_Adjoint(ginv(g_ini((i-1)*4+1:i*4,:)));
+        J_here       = Ad_g_ini_inv*J_Ltip((iLpre(i)-1)*6+1:iLpre(i)*6,:);
+    else
+        g_here   = g_ini((i-1)*4+1:i*4,:);
+        J_here   = zeros(6,ndof);
+    end
+    
+    %Joint
+    dof_here = Linkage.CVRods{i}(1).dof;
+    q_here   = q(dof_start:dof_start+dof_here-1);
+    Phi_here = Linkage.CVRods{i}(1).Phi;
+    xi_star  = Linkage.CVRods{i}(1).xi_star;
+    
+    if dof_here == 0 %fixed joint (N)
+        g_joint  = eye(4);
+        S_here = zeros(6,ndof);
+    else
+        xi           = Phi_here*q_here+xi_star;
+        [g_joint,Tg] = variable_expmap_gTg(xi);
+
+        S_here                                   = zeros(6,ndof);
+        S_here(:,dof_start:dof_start+dof_here-1) = Tg*Phi_here;
+    end
+    
+    %updating g, Jacobian, Jacobian_dot and eta
+    g_here = g_here*g_joint;
+    J_here = dinamico_Adjoint(ginv(g_joint))*(J_here+S_here);
+    
+    if Linkage.VLinks(Linkage.LinkIndex(i)).linktype == 'r'
+        
+        gi     = Linkage.VLinks(Linkage.LinkIndex(i)).gi;
+        g_here = g_here*gi;
+        J_here = dinamico_Adjoint(ginv(gi))*J_here;
+        
+        M_here   = Linkage.VLinks(Linkage.LinkIndex(i)).M;
+        if ~isempty(Linkage.M_added)
+            M_here = M_here+Linkage.M_added((i_sig_nj-1)*6+1:i_sig_nj*6,:); 
+        end
+        M        = M+J_here'*M_here*J_here;
+        i_sig_nj = i_sig_nj+1;
+        
+        % bringing all quantities to the end of rigid link
+        gf         = Linkage.VLinks(Linkage.LinkIndex(i)).gf;
+        g_here     = g_here*gf;
+        J_here     = dinamico_Adjoint(ginv(gf))*J_here;
+    end
+    
+    dof_start = dof_start+dof_here;
+    
+    for j = 1:Linkage.VLinks(Linkage.LinkIndex(i)).npie-1 %will run only if soft link
+        
+        dof_here = Linkage.CVRods{i}(j+1).dof;
+        q_here   = q(dof_start:dof_start+dof_here-1);
+
+        xi_star  = Linkage.CVRods{i}(j+1).xi_star;
+        gi       = Linkage.VLinks(Linkage.LinkIndex(i)).gi{j};
+        lpf      = Linkage.VLinks(Linkage.LinkIndex(i)).lp{j};
+        Ms       = Linkage.CVRods{i}(j+1).Ms;
+        Xs       = Linkage.CVRods{i}(j+1).Xs;
+        Ws       = Linkage.CVRods{i}(j+1).Ws;
+        nip      = Linkage.CVRods{i}(j+1).nip;
+        
+        %updating g, Jacobian, Jacobian_dot and eta at X=0
+        g_here = g_here*gi;
+        J_here = dinamico_Adjoint(ginv(gi))*J_here;
+        
+        %scaling of quantities
+        Lscale         = lpf;
+        g_here(1:3,4)  = g_here(1:3,4)/Lscale;
+        J_here(4:6,:)  = J_here(4:6,:)/Lscale;
+        
+        ii = 1;
+        if Ws(ii)>0
+            W_here  = Ws(ii);
+            Ms_here = Ms(6*(ii-1)+1:6*ii,:);
+
+            if isempty(Linkage.M_added)
+                Ms_here_add = Ms_here;
+            else
+                Ms_here_add = Ms_here+Linkage.M_added((i_sig_nj-1)*6+1:i_sig_nj*6,:);
+            end
+
+            Ms_here_add(1:3,:) = Ms_here_add(1:3,:)/Lscale;
+            Ms_here_add(4:6,:) = Ms_here_add(4:6,:)*Lscale;
+            M = M+W_here*J_here'*Ms_here_add*J_here*Lscale^2;
+        end
+        
+        i_sig_nj = i_sig_nj+1;
+        for ii = 2:nip
+
+            H = Xs(ii)-Xs(ii-1);
+            
+            if Linkage.Z_order==4
+                
+                xi_Z1here = xi_star(6*(ii-2)+1:6*(ii-1),2);
+                xi_Z2here = xi_star(6*(ii-2)+1:6*(ii-1),3);
+                xi_Z1here(1:3) = xi_Z1here(1:3)*Lscale; %scaling
+                xi_Z2here(1:3) = xi_Z2here(1:3)*Lscale;
+                
+                Phi_Z1here  = Linkage.CVRods{i}(j+1).Phi_Z1(6*(ii-2)+1:6*(ii-1),:);%note this step
+                Phi_Z2here  = Linkage.CVRods{i}(j+1).Phi_Z2(6*(ii-2)+1:6*(ii-1),:);
+                if dof_here>0
+                    xi_Z1here = Phi_Z1here*q_here+xi_Z1here;
+                    xi_Z2here = Phi_Z2here*q_here+xi_Z2here;
+                end
+                ad_xi_Z1here = dinamico_adj(xi_Z1here);
+                PhiGamma_here  = (H/2)*(Phi_Z1here+Phi_Z2here)+...
+                               ((sqrt(3)*H^2)/12)*(ad_xi_Z1here*Phi_Z2here-dinamico_adj(xi_Z2here)*Phi_Z1here);                
+
+                Gamma_here = (H/2)*(xi_Z1here+xi_Z2here)+...
+                                ((sqrt(3)*H^2)/12)*ad_xi_Z1here*xi_Z2here;
+                      
+            else % order 2
+                xi_Zhere = xi_star(6*(ii-2)+1:6*(ii-1),4);
+                xi_Zhere(1:3) = xi_Zhere(1:3)*Lscale; %scaling
+
+                Phi_Zhere  = Linkage.CVRods{i}(j+1).Phi_Z(6*(ii-2)+1:6*(ii-1),:);%note this step
+                if dof_here>0
+                    xi_Zhere = Phi_Zhere*q_here+xi_Zhere;
+                end
+                PhiGamma_here = H*Phi_Zhere;
+                
+                Gamma_here  = H*xi_Zhere;
+
+            end
+
+            [gh,TGamma_here] = variable_expmap_gTg(Gamma_here);
+            
+            S_here                                    = zeros(6,ndof);
+            S_here(:,dof_start:dof_start+dof_here-1)  = TGamma_here*PhiGamma_here;
+            
+            %updating g, Jacobian, Jacobian_dot and eta
+            g_here = g_here*gh;
+            J_here = dinamico_Adjoint(ginv(gh))*(J_here+S_here);
+            
+            %integrals evaluation
+            if Ws(ii)>0
+                W_here  = Ws(ii);
+                Ms_here = Ms(6*(ii-1)+1:6*ii,:);
+                
+                if isempty(Linkage.M_added)
+                    Ms_here_add = Ms_here;
+                else
+                    Ms_here_add = Ms_here+Linkage.M_added((i_sig_nj-1)*6+1:i_sig_nj*6,:);
+                end
+                
+                Ms_here_add(1:3,:) = Ms_here_add(1:3,:)/Lscale;
+                Ms_here_add(4:6,:) = Ms_here_add(4:6,:)*Lscale;
+                M = M+W_here*J_here'*Ms_here_add*J_here*Lscale^2;
+            end
+            i_sig_nj = i_sig_nj+1;
+        end
+        %scaling back quantities
+        g_here(1:3,4)  = g_here(1:3,4)*Lscale;
+        J_here(4:6,:)  = J_here(4:6,:)*Lscale;
+        
+        %updating g, Jacobian, Jacobian_dot and eta at X=L
+        gf     = Linkage.VLinks(Linkage.LinkIndex(i)).gf{j};
+        g_here = g_here*gf;
+        J_here = dinamico_Adjoint(ginv(gf))*J_here;
+        
+        dof_start = dof_start+dof_here;
+    end
+    g_Ltip((i-1)*4+1:i*4,:)  = g_here;
+    J_Ltip((i-1)*6+1:i*6,:)  = J_here;
+end
+end
+
