@@ -7,7 +7,7 @@ function RailLink = makeCarriage()
     RailLink.npie=1;
     
     CS = 'R'; %'C' for circular, 'R' for circular, 'E' for circular
-    L = 1;
+    L = 1.56;
 
     %L = 0.001;
     %L = 25.415;
@@ -24,16 +24,11 @@ function RailLink = makeCarriage()
     
     mass = 100000+5362.126;
     cx = L/2;
-    M = zeros(6,6);
-    M(1,1) = 0.01;
-    M(2,2) = 0.01;
-    M(3,3) = 0.01;
-    M(4,4) = mass;
-    M(5,5) = mass;
-    M(6,6) = mass;
+    M = spatial_inertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
+    
     %C-section properties
-    h  = @(X1)0.776; %height as function of X1
-    w  = @(X1)1.140; %flange width
+    h  = @(X1)1.16; %height as function of X1
+    w  = @(X1)1.365; %flange width
     tw = 0.05; %web thickness
     tf = 0.05; %flange thickness
    
@@ -50,8 +45,8 @@ function RailLink = makeCarriage()
     RailLink.b= [];
     RailLink.cx= cx;
     %RailLink.gi = [eye(4)];
-    RailLink.gi = [eye(3) [0.0;10;0.0];0 0 0 1];
-    RailLink.gf = [eye(4)];
+    RailLink.gi = [eye(3) [L/2;0.0;0.0];0 0 0 1];
+    RailLink.gf = [eye(3) [-L/2;0.0;0.0];0 0 0 1];
     RailLink.M= M;
     %RailLink.E = E ;
     RailLink.Rho= Rho;
@@ -76,4 +71,18 @@ Carriage = makeCarriage();
 %Now make full linkage object
 
 RailCarriage = SorosimLinkage(Carriage);
+
+function M = spatial_inertia(mass, Ic, c)
+
+% Skew-symmetric matrix of CoM position
+cx = [ ...
+    0    -c(3)   c(2);
+    c(3)  0     -c(1);
+    -c(2)  c(1)   0    ];
+
+M = [ ...
+    Ic + mass*cx*cx',   mass*cx;
+    -mass*cx,            mass*eye(3) ];
+
+end
 

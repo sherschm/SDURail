@@ -32,8 +32,11 @@ end
 
 L = Carriage.VLinks(1).L;
 
-T_1_offset = [eye(3) [-L/2;0;0];0 0 0 1];
-T_2_offset = [eye(3) [L/2;0;0];0 0 0 1];
+% T_1_offset = [eye(3) [-L/2;0;0];0 0 0 1];
+% T_2_offset = [eye(3) [L/2;0;0];0 0 0 1];
+T_1_offset = eye(4);
+%T_2_offset = ginv(ginv(Carriage.VLinks(1).gi)*Carriage.VLinks(1).gf);
+T_2_offset = ginv(Carriage.VLinks(1).gf)*Carriage.VLinks(1).gi;
 
 n_beam = Linkage.ndof;
 n_mass = Carriage.ndof;
@@ -46,40 +49,61 @@ qd_mass = qd(n_beam+1:n_beam+n_mass);
 s1 = s-L/2;
 s2 = s+L/2;
 
+% s1 = s;
+% s2 = s+L;
+
 T_s1 = FwdKinematicsAtS(Linkage, q_b, s1);
 T_s2 = FwdKinematicsAtS(Linkage, q_b, s2);
 
 %Kinematics of the centre of the body:
 [T_m,Jm_WRONG,Jmd_WRONG] = variable_expmap_gTgTgd(q_mass,qd_mass);
 
-%Kinematics of each ends
+% %Kinematics of each ends
 Tm_1 = T_m*T_1_offset;
-Ad_offset_1 = dinamico_Adjoint(ginv(T_1_offset));
-Jm_1_WRONG = Ad_offset_1*Jm_WRONG;
-Jmd_1_WRONG = Ad_offset_1*Jmd_WRONG;
-
-Jm_1 = zeros(6,6);
-Jm_1(1:3,1:3) = Jm_1_WRONG(1:3,1:3)';
-Jm_1(4:6,4:6) = Jm_1_WRONG(4:6,4:6)';
-Jm_1(4:6,1:3) = Jm_1_WRONG(4:6,1:3)';
-Jmd_1 = zeros(6,6);
-Jmd_1(1:3,1:3) = Jmd_1_WRONG(1:3,1:3)';
-Jmd_1(4:6,4:6) = Jmd_1_WRONG(4:6,4:6)';
-Jmd_1(4:6,1:3) = Jmd_1_WRONG(4:6,1:3)';
-
 Tm_2 = T_m*T_2_offset;
-Ad_offset_2 = dinamico_Adjoint(ginv(T_2_offset));
-Jm_2_WRONG = Ad_offset_2*Jm_WRONG;
-Jmd_2_WRONG = Ad_offset_2*Jmd_WRONG;
 
-Jm_2 = zeros(6,6);
-Jm_2(1:3,1:3) = Jm_2_WRONG(1:3,1:3)';
-Jm_2(4:6,4:6) = Jm_2_WRONG(4:6,4:6)';
-Jm_2(4:6,1:3) = Jm_2_WRONG(4:6,1:3)';
-Jmd_2 = zeros(6,6);
-Jmd_2(1:3,1:3) = Jmd_2_WRONG(1:3,1:3)';
-Jmd_2(4:6,4:6) = Jmd_2_WRONG(4:6,4:6)';
-Jmd_2(4:6,1:3) = Jmd_2_WRONG(4:6,1:3)';
+% Ad_offset_1 = dinamico_Adjoint(ginv(T_1_offset));
+% 
+% Jm_1_WRONG = Ad_offset_1*Jm_WRONG;
+% Jmd_1_WRONG = Ad_offset_1*Jmd_WRONG;
+% 
+% Jm_1 = zeros(6,6);
+% Jm_1(1:3,1:3) = Jm_1_WRONG(1:3,1:3)';
+% Jm_1(4:6,4:6) = Jm_1_WRONG(4:6,4:6)';
+% Jm_1(4:6,1:3) = Jm_1_WRONG(4:6,1:3)';
+% Jmd_1 = zeros(6,6);
+% Jmd_1(1:3,1:3) = Jmd_1_WRONG(1:3,1:3)';
+% Jmd_1(4:6,4:6) = Jmd_1_WRONG(4:6,4:6)';
+% Jmd_1(4:6,1:3) = Jmd_1_WRONG(4:6,1:3)';
+% 
+
+% Ad_offset_2 = dinamico_Adjoint(ginv(T_2_offset));
+% Jm_2_WRONG = Ad_offset_2*Jm_WRONG;
+% Jmd_2_WRONG = Ad_offset_2*Jmd_WRONG;
+% 
+% Jm_2 = zeros(6,6);
+% Jm_2(1:3,1:3) = Jm_2_WRONG(1:3,1:3)';
+% Jm_2(4:6,4:6) = Jm_2_WRONG(4:6,4:6)';
+% Jm_2(4:6,1:3) = Jm_2_WRONG(4:6,1:3)';
+% Jmd_2 = zeros(6,6);
+% Jmd_2(1:3,1:3) = Jmd_2_WRONG(1:3,1:3)';
+% Jmd_2(4:6,4:6) = Jmd_2_WRONG(4:6,4:6)';
+% Jmd_2(4:6,1:3) = Jmd_2_WRONG(4:6,1:3)';
+
+Ad_offset_1 = dinamico_Adjoint(ginv(T_1_offset));
+Ad_offset_2 = dinamico_Adjoint(ginv(T_2_offset));
+Jm = zeros(6,6);
+Jm(1:3,1:3) = Jm_WRONG(1:3,1:3)';
+Jm(4:6,4:6) = Jm_WRONG(4:6,4:6)';
+Jm(4:6,1:3) = Jm_WRONG(4:6,1:3)';
+Jmd = zeros(6,6);
+Jmd(1:3,1:3) = Jmd_WRONG(1:3,1:3)';
+Jmd(4:6,4:6) = Jmd_WRONG(4:6,4:6)';
+Jmd(4:6,1:3) = Jmd_WRONG(4:6,1:3)';
+Jm_1 = Ad_offset_1*Jm;
+Jmd_1 = Ad_offset_1*Jmd;
+Jm_2 = Ad_offset_2*Jm;
+Jmd_2 = Ad_offset_2*Jmd;
 
 g_sm_1 = ginv(T_s1) * Tm_1;
 g_sm_2 = ginv(T_s2) * Tm_2;

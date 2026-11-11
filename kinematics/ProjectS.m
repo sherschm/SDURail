@@ -74,7 +74,7 @@
 % 
 % end
 % 
-function [s,L] = ProjectS(Linkage,q_b,q_c,s_prev)
+function [s,L] = ProjectS(Linkage,Carriage,q_b,q_c,s_prev)
 
 % Projects carriage position onto backbone:
 %
@@ -95,7 +95,12 @@ function [s,L] = ProjectS(Linkage,q_b,q_c,s_prev)
     % Carriage position
     %---------------------------------------
 
-    gm  = variable_expmap_g(q_c);
+    gm_end_1  = variable_expmap_g(q_c);
+
+    %g_offset = ginv(Carriage.VLinks(1).gi);
+    g_offset = Carriage.VLinks(1).gi;
+    gm = gm_end_1*g_offset;  %move to centre of carriage
+
     p_c = gm(1:3,4);
 
     %---------------------------------------

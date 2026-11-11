@@ -1,4 +1,4 @@
-function plotq(Linkage,q)
+function plotRail(Linkage,q)
 
 if nargin==1
     q=zeros(Linkage.ndof,1);

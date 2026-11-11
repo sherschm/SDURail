@@ -24,7 +24,7 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
         qm = q_mass_full(i,:)';
 
         % Project s
-        s(i) = ProjectS(Linkage, qb, qm, Linkage.VLinks(1).L/2);  
+        s(i) = ProjectS(Linkage,Carriage, qb, qm, Linkage.VLinks(1).L/2);  
         % (replace with your equivalent of project_s_newton if different)
 
         % Compute transform

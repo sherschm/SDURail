@@ -99,6 +99,8 @@ end
 
 %S= eye(6);
 
+T_offset = Carriage.VLinks(1).gi;
+
 n_beam = Linkage.ndof;
 n_mass = Carriage.ndof;
 q_b = q(1:n_beam);
@@ -108,7 +110,14 @@ qd_mass = qd(n_beam+1:n_beam+n_mass);
 
 % --- Forward kinematics 
 T_s = FwdKinematicsAtS(Linkage, q_b, s);
+
 [T_m,Jm_WRONG,Jmd_WRONG] = variable_expmap_gTgTgd(q_mass,qd_mass);
+
+T_m_offset = T_m*T_offset;
+Ad_offset = dinamico_Adjoint(ginv(T_offset));
+
+Jm_WRONG = Ad_offset*Jm_WRONG;
+Jmd_WRONG = Ad_offset*Jmd_WRONG;
 
 Jm = zeros(6,6);
 Jm(1:3,1:3) = Jm_WRONG(1:3,1:3)';
@@ -120,7 +129,7 @@ Jmd(1:3,1:3) = Jmd_WRONG(1:3,1:3)';
 Jmd(4:6,4:6) = Jmd_WRONG(4:6,4:6)';
 Jmd(4:6,1:3) = Jmd_WRONG(4:6,1:3)';
 
-g_sm = ginv(T_s) * T_m;
+g_sm = ginv(T_s) * T_m_offset;
 
 % --- Jacobians in their natural frames
 Js = JacobianAtS(Linkage, q_b, s);

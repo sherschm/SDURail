@@ -7,9 +7,9 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     
     %Baumgarte Stabilisation parameters
 
- t_baum = 0.2;
- alpha =  0.0%2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
- beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+     t_baum = 0.5;
+     alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+     beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
 
     %t_baum = 0.03;
     %alpha =  0.0; %2/t_baum; %50.0;%0.0;%% damping 0.0;%
@@ -35,7 +35,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        [s,~] = ProjectS(Linkage, q_b, q_mass, Linkage.VLinks(1).L/2);
+        [s,~] = ProjectS(Linkage,Carriage, q_b, q_mass, Linkage.VLinks(1).L/2);
 
         % ----------------------------
         % Beam dynamics
@@ -152,7 +152,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     % ODE options with event function
     % ----------------------------
     %opts = odeset('OutputFcn', @showTime,'Events', @term_condition);
-    opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage));
+    opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage,Carriage));
 
     disp("Simulating...");
     
@@ -176,7 +176,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     xdot_out = interp1(tvec, xdot_sol, tvec_out, 'linear');
 end
 
-function status = showTime(t, y, flag, Linkage)
+function status = showTime(t, y, flag, Linkage,Carriage)
 
    
     %n_beam = 16; 
@@ -193,7 +193,7 @@ function status = showTime(t, y, flag, Linkage)
         % ----------------------------
         % solve internal coordinate s
         % ----------------------------
-        [s,~] = ProjectS(Linkage, q_b, q_mass, Linkage.VLinks(1).L/2);
+        [s,~] = ProjectS(Linkage,Carriage, q_b, q_mass, Linkage.VLinks(1).L/2);
         fprintf('s = %.3f\r', s);
     end
     

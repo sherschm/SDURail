@@ -7,7 +7,7 @@ function RailLink = makeCarriage()
     RailLink.npie=1;
     
     CS = 'R'; %'C' for circular, 'R' for circular, 'E' for circular
-    L = 1;
+    L = 1.56;
 
     %L = 0.001;
     %L = 25.415;
@@ -32,8 +32,8 @@ function RailLink = makeCarriage()
     M(5,5) = mass;
     M(6,6) = mass;
     %C-section properties
-    h  = @(X1)0.776; %height as function of X1
-    w  = @(X1)1.140; %flange width
+    h  = @(X1)1.16; %height as function of X1
+    w  = @(X1)1.365; %flange width
     tw = 0.05; %web thickness
     tf = 0.05; %flange thickness
    
@@ -49,9 +49,9 @@ function RailLink = makeCarriage()
     RailLink.a= [];
     RailLink.b= [];
     RailLink.cx= cx;
-    RailLink.gi = [eye(4)];
-    %RailLink.gi = [eye(3) [0.0;1;0.0];0 0 0 1];
-    RailLink.gf = [eye(4)];
+    %RailLink.gi = [eye(4)];
+    RailLink.gi = [eye(3) [L/2;0.0;0.0];0 0 0 1];
+    RailLink.gf = [eye(3) [-L/2;0.0;0.0];0 0 0 1];
     RailLink.M= M;
     %RailLink.E = E ;
     RailLink.Rho= Rho;

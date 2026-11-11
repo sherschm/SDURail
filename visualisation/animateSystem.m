@@ -1,4 +1,4 @@
-function AnimateRail(Linkage, Carriage, t, x, ctrl, options)
+function animateSystem(Linkage, Carriage, t, x, ctrl, options)
 
 arguments
     Linkage
@@ -81,8 +81,8 @@ set(gcf, 'Renderer', 'OpenGL');
 
 %axis limits
 axis ([[-0.1 1.2*Linkage.VLinks.L] ...
-        [-20*Linkage.VLinks.h{1}(0) 20*Linkage.VLinks.h{1}(0)] ...
-        [-20*Linkage.VLinks.w{1}(0) 20*Linkage.VLinks.w{1}(0)]]);
+        [-2*Linkage.VLinks.h{1}(0) 2*Linkage.VLinks.h{1}(0)] ...
+        [-2*Linkage.VLinks.w{1}(0) 2*Linkage.VLinks.w{1}(0)]]);
 
 drawnow
 
@@ -103,11 +103,14 @@ for tt=0:1/FrameRate:tmax
     plotLinkage(Carriage,q_mass);
 
     %plot carriage interface frame
-    g_s = variable_expmap_g(q_mass);
+    g_s_end = variable_expmap_g(q_mass);
+
+    gi = Carriage.VLinks(1).gi;
+    g_s= g_s_end*gi;
     plotFrame(g_s)
     
     %plot projected tangent frame (aka where the carraiage should be)
-    s_proj = ProjectS(Linkage,q,q_mass,Linkage.VLinks(1).L/2);
+    s_proj = ProjectS(Linkage,Carriage,q,q_mass,Linkage.VLinks(1).L/2);
     p_proj = FwdKinematicsAtS(Linkage,q,s_proj);
     plotFrame(p_proj,':');
 
