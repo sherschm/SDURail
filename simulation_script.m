@@ -11,8 +11,8 @@ addpath('controllers')
 
 %import properties of deformable Rail
 run("RailParameters.m")
-run("CarriageParameters.m")
-%run("CarriageParameters_Offset.m")
+%run("CarriageParameters.m")
+run("CarriageParameters_Offset.m")
 
 % plot the chosen strain shape functions
 %plotStrainBasis(RailLinkage)
@@ -21,7 +21,7 @@ ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2;%+0.2;%+1.0;
+s0 = RailLink.L/2+1;%+0.2;%+1.0;
 
 tf = 5.0; %simulation time
 dt = 0.005;
@@ -57,13 +57,14 @@ q_equil = FindEquilibriumFixed( ...
                     T_0_fixed, T_L_fixed);
 [s0_new,~] = ProjectS(RailLinkage,RailCarriage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end),s0+RailCarriage.VLinks(1).L/2);
 
-q0 = q_equil;
+%q0 = q_equil;
 % plotq(RailLinkage,q0(1:RailLinkage.ndof))
 
 x0 = [q0;zeros(ndof,1)];
 
 %Solve DAE
-[tvec_out, x_out, xdot_out] = ODEKKTSolver(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
+%[tvec_out, x_out, xdot_out] = ODEKKTSolver(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
+[tvec_out, x_out, xdot_out] = ODESolverFaster(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
 
 %Plot results & animate rail
 

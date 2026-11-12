@@ -10,16 +10,13 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
      t_baum = 0.1;
      alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
      beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+     alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
+     beta =   0.0; %100.0;%0.0;%% stiffness 
+     % W = blkdiag( ...
+     %     10*eye(length(err_mass)), ...
+     %     eye(length(err0)), ...
+     %     eye(length(errL)));
 
-    %t_baum = 0.03;
-    %alpha =  0.0; %2/t_baum; %50.0;%0.0;%% damping 0.0;%
-    %beta =   0.0; %1/(t_baum^2) ; %100.0;%0.0;%% stiffness 0.0;%
-    
-    % alpha_terms =  [2*(2/t_baum)*ones(1,5) (2/t_baum)*ones(1,12)];
-    % beta_terms = [5*(1/(t_baum^2))*ones(1,5) (1/(t_baum^2))*ones(1,12)];
-
-    % alpha = diag(alpha_terms);
-    % beta = diag(beta_terms);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -80,32 +77,32 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         C_full = zeros(n,1);
         g_full = zeros(n,1);
 
-        [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
-        [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
-        C_full(n_beam+1:end) = Cm*qd_mass;
-        M_full = zeros(n,n);
-        M_full(1:n_beam,1:n_beam) = Mb;
-        M_full(n_beam+1:end,n_beam+1:end) = Mm;
-        g_full(1:n_beam) = -ID_no_Mqdd + tau;
-        g_full(n_beam+1:end) = -ID_no_Mqddm + taum;
-
-
+        % [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+        % [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
+        % C_full(n_beam+1:end) = Cm*qd_mass;
         % M_full = zeros(n,n);
-        % M_full(1:n_beam,1:n_beam) = GeneralizedMassMatrix_corrected(Linkage,q_b);
-        % M_full(n_beam+1:end,n_beam+1:end) = GeneralizedMassMatrix_corrected(Carriage,q_mass);
-        % g_full(1:n_beam) = -dynamicsResidual( ...
-        %     Linkage,...
-        %     0.0,...
-        %     [q_b;
-        %     qd_b;
-        %     zeros(n_beam,1)]);
-        % 
-        % g_full(n_beam+1:n) = -dynamicsResidual( ...
-        %                 Carriage,...
-        %                 0.0,...
-        %                 [q_mass;
-        %                 qd_mass;
-        %                 zeros(n_mass,1)]);
+        % M_full(1:n_beam,1:n_beam) = Mb;
+        % M_full(n_beam+1:end,n_beam+1:end) = Mm;
+        % g_full(1:n_beam) = -ID_no_Mqdd + tau;
+        % g_full(n_beam+1:end) = -ID_no_Mqddm + taum;
+
+
+        M_full = zeros(n,n);
+        M_full(1:n_beam,1:n_beam) = GeneralizedMassMatrix_corrected(Linkage,q_b);
+        M_full(n_beam+1:end,n_beam+1:end) = GeneralizedMassMatrix_corrected(Carriage,q_mass);
+        g_full(1:n_beam) = -dynamicsResidual( ...
+            Linkage,...
+            0.0,...
+            [q_b;
+            qd_b;
+            zeros(n_beam,1)]);
+
+        g_full(n_beam+1:n) = -dynamicsResidual( ...
+                        Carriage,...
+                        0.0,...
+                        [q_mass;
+                        qd_mass;
+                        zeros(n_mass,1)]);
     
 
         % Control term
@@ -143,7 +140,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
         KKTs = [Ms, Js';
             Js, zeros(size(Js,1))];
-
+        %fprintf('cond(KKTs) = %e\n', cond(KKTs));
         rhs_s = [S' * f;
             gamma];
 
@@ -153,20 +150,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         lambda = sol_s(n+1:end);
 
         qdd = S * zdd;
-       %  %Build KKT Matrix
-       %  KKT = [M_full, J_c';
-       %         J_c, zeros(nc)];
-       %  %disp('KKT condition number:')
-       % % disp(cond(KKT))
-       % 
-       %  rhs = [f;
-       %         gamma];
-       % 
-       %  sol = KKT \ rhs;
-       % 
-       %  qdd = sol(1:n);
-        % lambda = sol(n+1:end);
-        
+
         xd = [qd;
               qdd];
        

@@ -21,9 +21,7 @@ function RailLink = makeCarriage()
     % r = @(X1)0.03; %function of normalzied X. X1 in [0 1]
     % 
 
-    %M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 0.0, -10.0]);
-    M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 0.0, 0.0]);
-
+    M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 0.0, -10.0]);
     
     I_carriage_gmm2 = [2270359750601 6009281838 -848994588;...
                         6009281838 2267340725116 18423114464;...

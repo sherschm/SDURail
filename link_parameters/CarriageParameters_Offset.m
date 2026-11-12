@@ -22,12 +22,18 @@ function RailLink = makeCarriage()
     % 
     %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for circular cross section
     
-    mass = 100000+5362.126;
     mass_carriage = 5362.126;
     cx = L/2;
-    M = defineSpatialInertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
+    I_carriage_gmm2 = [2270359750601 6009281838 -848994588;...
+        6009281838 2267340725116 18423114464;...
+        -848994588 18423114464 2116915463330];
+    I_carriage = 1e-9*I_carriage_gmm2;
 
-    M = defineSpatialInertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
+    M_carriage = defineSpatialInertia(mass_carriage, I_carriage, [0.0, 0.0, 0.0]);
+
+    M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 1.0, 0.0]);
+
+    M = M_carriage + M_payload;
 
     %C-section properties
     h  = @(X1)1.16; %height as function of X1
