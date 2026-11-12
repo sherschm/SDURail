@@ -23,9 +23,12 @@ function RailLink = makeCarriage()
     %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for circular cross section
     
     mass = 100000+5362.126;
+    mass_carriage = 5362.126;
     cx = L/2;
-    M = spatial_inertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
-    
+    M = defineSpatialInertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
+
+    M = defineSpatialInertia(mass, diag([0.01,0.01,0.01]),[0.0, 1.0, 0.0]);
+
     %C-section properties
     h  = @(X1)1.16; %height as function of X1
     w  = @(X1)1.365; %flange width
@@ -71,18 +74,4 @@ Carriage = makeCarriage();
 %Now make full linkage object
 
 RailCarriage = SorosimLinkage(Carriage);
-
-function M = spatial_inertia(mass, Ic, c)
-
-% Skew-symmetric matrix of CoM position
-cx = [ ...
-    0    -c(3)   c(2);
-    c(3)  0     -c(1);
-    -c(2)  c(1)   0    ];
-
-M = [ ...
-    Ic + mass*cx*cx',   mass*cx;
-    -mass*cx,            mass*eye(3) ];
-
-end
 

@@ -32,10 +32,7 @@ end
 
 L = Carriage.VLinks(1).L;
 
-% T_1_offset = [eye(3) [-L/2;0;0];0 0 0 1];
-% T_2_offset = [eye(3) [L/2;0;0];0 0 0 1];
 T_1_offset = eye(4);
-%T_2_offset = ginv(ginv(Carriage.VLinks(1).gi)*Carriage.VLinks(1).gf);
 T_2_offset = ginv(Carriage.VLinks(1).gf)*Carriage.VLinks(1).gi;
 
 n_beam = Linkage.ndof;

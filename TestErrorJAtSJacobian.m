@@ -56,7 +56,9 @@ end
 end
 
 q_test = ones(6,1);
-[T,Jm] = variable_expmap_gTgTgd(q_test,zeros(6,1));
+qd_test = ones(6,1);
+
+[T,Jm,Jmd] = variable_expmap_gTgTgd(q_test,qd_test);
 
 for i = 1:6
 
@@ -76,28 +78,30 @@ Jfd
 
 qd_test = ones(6,1);
 
-[T,Jm,Jmd_wrong] = variable_expmap_gTgTgd(q_test,qd_test);
+[T,Jm_wrong,Jmd_wrong] = variable_expmap_gTgTgd(q_test,qd_test);
 
 h = 1e-7;
 
 qp = q_test + h*qd_test;
 qm = q_test - h*qd_test;
 
-[~,Jp_wrong] = variable_expmap_gTgTgd(qp,qd_test);
-[~,Jm_wrong] = variable_expmap_gTgTgd(qm,qd_test);
+[T,Jm_wrong,Jmd_wrong] = variable_expmap_gTgTgd(q_test,qd_test);
+[~,Jplus_wrong] = variable_expmap_gTgTgd(qp,qd_test);
+[~,Jminus_wrong] = variable_expmap_gTgTgd(qm,qd_test);
 
 % Apply your correction
-Jp = zeros(6,6);
-Jp(1:3,1:3) = Jp_wrong(1:3,1:3)';
-Jp(4:6,4:6) = Jp_wrong(4:6,4:6)';
-Jp(4:6,1:3) = Jp_wrong(4:6,1:3)';
 
-Jm_fd = zeros(6,6);
-Jm_fd(1:3,1:3) = Jm_wrong(1:3,1:3)';
-Jm_fd(4:6,4:6) = Jm_wrong(4:6,4:6)';
-Jm_fd(4:6,1:3) = Jm_wrong(4:6,1:3)';
+Jplus = zeros(6,6);
+Jplus(1:3,1:3) = Jplus_wrong(1:3,1:3)';
+Jplus(4:6,4:6) = Jplus_wrong(4:6,4:6)';
+Jplus(4:6,1:3) = Jplus_wrong(4:6,1:3)';
 
-Jmd_fd = (Jp - Jm_fd)/(2*h);
+Jminus = zeros(6,6);
+Jminus(1:3,1:3) = Jminus_wrong(1:3,1:3)';
+Jminus(4:6,4:6) = Jminus_wrong(4:6,4:6)';
+Jminus(4:6,1:3) = Jminus_wrong(4:6,1:3)';
+
+Jmd_fd = (Jplus - Jminus)/(2*h);
 
 Jmd = zeros(6,6);
 Jmd(1:3,1:3) = Jmd_wrong(1:3,1:3)';

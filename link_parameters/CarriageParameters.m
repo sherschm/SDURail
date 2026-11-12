@@ -20,17 +20,30 @@ function RailLink = makeCarriage()
     % w = @(X1)1.140;
     % r = @(X1)0.03; %function of normalzied X. X1 in [0 1]
     % 
-    %[M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for circular cross section
+
+    %M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 0.0, -10.0]);
+    M_payload = defineSpatialInertia(100000, diag([0.0001,0.0001,0.0001]),[0.0, 0.0, 0.0]);
+
     
-    mass = 100000+5362.126;
+    I_carriage_gmm2 = [2270359750601 6009281838 -848994588;...
+                        6009281838 2267340725116 18423114464;...
+                        -848994588 18423114464 2116915463330];
+    I_carriage = 1e-9*I_carriage_gmm2;
+    M_carriage = defineSpatialInertia(5362.126, I_carriage, [0.0, 0.0, 0.0]);
+    
+
+    % mass = 5362.126;
     cx = L/2;
-    M = zeros(6,6);
-    M(1,1) = 0.01;
-    M(2,2) = 0.01;
-    M(3,3) = 0.01;
-    M(4,4) = mass;
-    M(5,5) = mass;
-    M(6,6) = mass;
+    % M = zeros(6,6);
+    % M(1,1) = 0.01;
+    % M(2,2) = 0.01;
+    % M(3,3) = 0.01;
+    % M(4,4) = mass;
+    % M(5,5) = mass;
+    % M(6,6) = mass;
+    M = M_carriage + M_payload;
+
+
     %C-section properties
     h  = @(X1)1.16; %height as function of X1
     w  = @(X1)1.365; %flange width

@@ -7,7 +7,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     
     %Baumgarte Stabilisation parameters
 
-     t_baum = 0.5;
+     t_baum = 0.1;
      alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
      beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
 
@@ -48,7 +48,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         
         %Compute constraint errors & constraint Jacobians
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
-        %[err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
+        % [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
         [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS_both_ends(Linkage, Carriage, s, q, qd);
 
         %Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ; %Ideally replace with analytical Jdot.
@@ -79,6 +79,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         g_full = zeros(n,1);
         C_full = zeros(n,1);
         g_full = zeros(n,1);
+
         [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
         [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
         C_full(n_beam+1:end) = Cm*qd_mass;
@@ -87,19 +88,19 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         M_full(n_beam+1:end,n_beam+1:end) = Mm;
         g_full(1:n_beam) = -ID_no_Mqdd + tau;
         g_full(n_beam+1:end) = -ID_no_Mqddm + taum;
-        
-        
+
+
         % M_full = zeros(n,n);
         % M_full(1:n_beam,1:n_beam) = GeneralizedMassMatrix_corrected(Linkage,q_b);
         % M_full(n_beam+1:end,n_beam+1:end) = GeneralizedMassMatrix_corrected(Carriage,q_mass);
-        % g_full(1:n_beam) = dynamicsResidual( ...
+        % g_full(1:n_beam) = -dynamicsResidual( ...
         %     Linkage,...
         %     0.0,...
         %     [q_b;
         %     qd_b;
         %     zeros(n_beam,1)]);
         % 
-        % g_full(n_beam+1:n) = dynamicsResidual( ...
+        % g_full(n_beam+1:n) = -dynamicsResidual( ...
         %                 Carriage,...
         %                 0.0,...
         %                 [q_mass;
@@ -117,29 +118,54 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % PD controller!
         % example PD + geometry-based term
         %u = PD_carriage_control(Linkage, s, q, qd, controller);
-        u = 10000;
-        %u=0.0;
+        %u = 10000;
+        u=0.0;
+
         f = g_full + B_full*u;
         
         gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
        % gamma =  - alpha*err_vel - beta*err_pos;
 
-
         nc = size(J_c,1);
-
-        %Build KKT Matrix
-        KKT = [M_full, J_c';
-               J_c, zeros(nc)];
-        %disp('KKT condition number:')
-        %disp(cond(KKT))
-
-        rhs = [f;
-               gamma];
         
-        sol = KKT \ rhs;
-        
-        qdd = sol(1:n);
-        lambda = sol(n+1:end);
+        % Scale coordinates so that diagonal(M) ~= 1
+        d = diag(M_full);
+
+        d = max(d, 1e-6*max(d));
+
+        S = diag(1./sqrt(d));
+        Ms = S' * M_full * S;
+
+        %fprintf('cond(M)  = %e\n', cond(M_full));
+        %fprintf('cond(Ms) = %e\n', cond(Ms));
+
+        Js = J_c * S;
+
+        KKTs = [Ms, Js';
+            Js, zeros(size(Js,1))];
+
+        rhs_s = [S' * f;
+            gamma];
+
+        sol_s = KKTs \ rhs_s;
+
+        zdd    = sol_s(1:n);
+        lambda = sol_s(n+1:end);
+
+        qdd = S * zdd;
+       %  %Build KKT Matrix
+       %  KKT = [M_full, J_c';
+       %         J_c, zeros(nc)];
+       %  %disp('KKT condition number:')
+       % % disp(cond(KKT))
+       % 
+       %  rhs = [f;
+       %         gamma];
+       % 
+       %  sol = KKT \ rhs;
+       % 
+       %  qdd = sol(1:n);
+        % lambda = sol(n+1:end);
         
         xd = [qd;
               qdd];

@@ -116,8 +116,8 @@ T_s = FwdKinematicsAtS(Linkage, q_b, s);
 T_m_offset = T_m*T_offset;
 Ad_offset = dinamico_Adjoint(ginv(T_offset));
 
-Jm_WRONG = Ad_offset*Jm_WRONG;
-Jmd_WRONG = Ad_offset*Jmd_WRONG;
+% Jm_WRONG = Ad_offset*Jm_WRONG;
+% Jmd_WRONG = Ad_offset*Jmd_WRONG;
 
 Jm = zeros(6,6);
 Jm(1:3,1:3) = Jm_WRONG(1:3,1:3)';
@@ -128,6 +128,9 @@ Jmd = zeros(6,6);
 Jmd(1:3,1:3) = Jmd_WRONG(1:3,1:3)';
 Jmd(4:6,4:6) = Jmd_WRONG(4:6,4:6)';
 Jmd(4:6,1:3) = Jmd_WRONG(4:6,1:3)';
+
+Jm = Ad_offset*Jm;
+Jmd = Ad_offset*Jmd;
 
 g_sm = ginv(T_s) * T_m_offset;
 

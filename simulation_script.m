@@ -11,20 +11,11 @@ addpath('controllers')
 
 %import properties of deformable Rail
 run("RailParameters.m")
-%run("CarriageParameters.m")
-run("CarriageParameters_Offset.m")
+run("CarriageParameters.m")
+%run("CarriageParameters_Offset.m")
 
 % plot the chosen strain shape functions
 %plotStrainBasis(RailLinkage)
-
-%define properties of carriage (just a 6DOF lumped mass)
-
-%RailCarriage = 
-% RailCarriage.mass       = 105000.0; % kg
-% RailCarriage.com_offset = [0.0 0.0 0.0]; % %distance from body frame
-% RailCarriage.I_com     = 0.0001*eye(3); % Moment of inertia (assumes uniform & symmetrical about xyz for now)
-% RailCarriage.fixed     = false;
-% RailCarriage.ndof = 6;
 
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
@@ -38,7 +29,7 @@ dt = 0.005;
 tf = 1.0; %simulation time
 
 % calculate the initial pose of the carriage frame
-g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0); %SE(3)
+g_s0 = FwdKinematicsAtS(RailLinkage,q_b0,s0-RailCarriage.VLinks(1).L/2); %SE(3)
 q_m0 = piecewise_logmap(g_s0); % carriage coordinates (in tangent space of origin)
    
 %define the initial system state (position and vel)
@@ -66,7 +57,7 @@ q_equil = FindEquilibriumFixed( ...
                     T_0_fixed, T_L_fixed);
 [s0_new,~] = ProjectS(RailLinkage,RailCarriage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end),s0+RailCarriage.VLinks(1).L/2);
 
-%q0 = q_equil;
+q0 = q_equil;
 % plotq(RailLinkage,q0(1:RailLinkage.ndof))
 
 x0 = [q0;zeros(ndof,1)];
@@ -205,7 +196,7 @@ grid on;
 ax.GridAlpha = 0.15;
 ax.MinorGridAlpha = 0.08;
 
-%% Figure size and export
+% Figure size and export
 set(gcf,'Units','inches','Position',[1 1 10 2.5]);
 
 exportgraphics(gcf, ...
