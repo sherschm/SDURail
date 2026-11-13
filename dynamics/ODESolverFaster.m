@@ -160,35 +160,61 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         f = g_full;
 
         gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;
-       % gamma =  - alpha*err_vel - beta*err_pos;
+       
+        % Construct the complete KKT matrix
+        KKT = [M_full, J_c';
+            J_c,    zeros(size(J_c,1))];
 
-        nc = size(J_c,1);
+        rhs = [f; gamma];
+
+        N = size(KKT,1);
+
+        % Initialise diagonal scaling
+        d = ones(N,1);
+
+        % Ruiz equilibration
+        maxIter = 10;
+
+        for k = 1:maxIter
+
+            D = spdiags(d,0,N,N);
+
+            Ks = D * KKT * D;
+
+            % Infinity norm of each row
+            rowNorm = max(abs(Ks),[],2);
+
+            % Avoid division by zero
+            rowNorm = max(rowNorm,1e-12);
+
+            % Update scaling factors
+            alpha_ruiz = 1 ./ sqrt(rowNorm);
+
+            % Limit individual scaling updates
+            alpha_ruiz = max(min(alpha_ruiz,10),0.1);
+
+            d = d .* alpha_ruiz;
+
+        end
+
+        % Final scaled system
+        D = spdiags(d,0,N,N);
+
+        KKTs = D * KKT * D;
+        rhs_s = D * rhs;
+
+        % fprintf('cond(KKT)  = %e\n', cond(KKT));
+        % fprintf('cond(KKT2)  = %e\n', cond(KKTs));
+        %fprintf('cond(Ms) = %e\n', cond(Ms));
+
+        % Solve
+        z = KKTs \ rhs_s;
         
-        % Scale coordinates so that diagonal(M) ~= 1
-        d = diag(M_full);
+        % Recover physical solution
+        sol = D * z;
 
-        d = max(d, 1e-6*max(d));
-
-        S = diag(1./sqrt(d));
-        Ms = S' * M_full * S;
-         % 
-         % fprintf('cond(M)  = %e\n', cond(M_full));
-         % fprintf('cond(Ms) = %e\n', cond(Ms)); 
-         % fprintf('cond(Jc)  = %e\n', cond(J_c));
-
-        Js = J_c * S;
-
-        Minvf = Ms \ (S'*f);
-
-        A = Js * (Ms \ Js');
-        %fprintf('cond(A)  = %e\n', cond(A))
-        b = Js * Minvf - gamma;
-
-        lambda = A \ b;
-
-        zdd = Minvf - Ms \ (Js' * lambda);
-
-        qdd = S*zdd;
+        qdd = sol(1:size(M_full,1));
+        %lambda = sol(size(M_full,1)+1:end);
 
         xd = [qd;
               qdd];
@@ -208,8 +234,8 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
     disp("Simulating...");
     
-    %[t, x] = ode15s(@ode_fun, tspan, x0, opts);
-    [t, x] = ode45(@ode_fun, tspan, x0, opts);
+    [t, x] = ode15s(@ode_fun, tspan, x0, opts);
+    %[t, x] = ode45(@ode_fun, tspan, x0, opts);
 
     
     % ----------------------------
