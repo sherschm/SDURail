@@ -29,67 +29,40 @@ function [s,L] = ProjectS(Linkage,Carriage,q_b,q_c,s_prev)
     p_c = gm(1:3,4);
 
     %---------------------------------------
-    % Global search
+    % Optional warm-start preference vs Global search
     %---------------------------------------
 
     if nargin >= 5 && ~isempty(s_prev)
-
-        s_grid = linspace( ...
-            max(0,s_prev-0.1*L), ...
-            min(L,s_prev+0.1*L), ...
-            20);
-
+        s = s_prev;
     else
+        ds = 0.02*L;
+        s_grid = linspace(0,L,20);
+        %s_grid = linspace(0,L,Ngrid);
+        Ngrid = length(s_grid);
+        d2_best = Inf;
+        s_best  = L/2;
 
-        s_grid = linspace(0,L,100);
+        for k = 1:Ngrid
 
-    end
+            T = FwdKinematicsAtS(Linkage,q_b,s_grid(k));
 
-    %s_grid = linspace(0,L,Ngrid);
-    Ngrid = length(s_grid);
-    d2_best = Inf;
-    s_best  = L/2;
+            p_b = T(1:3,4);
 
-    for k = 1:Ngrid
+            d2 = sum((p_b - p_c).^2);
 
-        T = FwdKinematicsAtS(Linkage,q_b,s_grid(k));
-
-        p_b = T(1:3,4);
-
-        d2 = sum((p_b - p_c).^2);
-
-        if d2 < d2_best
-            d2_best = d2;
-            s_best = s_grid(k);
-        end
-
-    end
-
-    %---------------------------------------
-    % Optional warm-start preference
-    %---------------------------------------
-
-    if nargin >= 5 && ~isempty(s_prev)
-
-        window = 0.1*L;
-
-        if abs(s_best - s_prev) < window
-            s = s_prev;
-        else
+            if d2 < d2_best
+                d2_best = d2;
+                s_best = s_grid(k);
+            end
             s = s_best;
         end
-
-    else
-
-        s = s_best;
-
     end
 
     %---------------------------------------
     % Newton refinement
     %---------------------------------------
 
-    maxIter = 10;
+    maxIter = 30;
     tol_s   = 1e-8;
 
     for iter = 1:maxIter
@@ -107,7 +80,10 @@ function [s,L] = ProjectS(Linkage,Carriage,q_b,q_c,s_prev)
             break
         end
 
-        ds = -(dpds.'*r)/(dpds.'*dpds);
+        %ds = -(dpds.'*r)/(dpds.'*dpds);
+        denom = dpds.'*dpds + 1e-12;
+        ds = -(dpds.'*r)/denom;
+        
         ds = max(min(ds,0.05*L),-0.05*L); %trust region
 
         s_new = min(max(s + ds,0),L);

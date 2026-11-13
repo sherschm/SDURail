@@ -4,7 +4,7 @@ function plotStrainBasis(RailLinkage)
     X_vals =  linspace(0,1,100);  % 100 points from 0 to 1
     Phi_all = [];
     for i = 1:length(X_vals)
-        Phi = Phi_LegendrePolynomial(X_vals(i), RailLinkage.CVRods{1}(2).Phi_dof, RailLinkage.CVRods{1}(2).Phi_odr);
+        Phi = RailLinkage.CVRods{1}(2).Phi_h(X_vals(i), RailLinkage.CVRods{1}(2).Phi_dof, RailLinkage.CVRods{1}(2).Phi_odr);
         Phi_all(:,:,i) = Phi;   % store each result
     end
     figure; hold on;

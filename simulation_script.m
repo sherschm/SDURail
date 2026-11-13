@@ -15,13 +15,15 @@ run("RailParameters.m")
 run("CarriageParameters_Offset.m")
 
 % plot the chosen strain shape functions
-%plotStrainBasis(RailLinkage)
+plotStrainBasis(RailLinkage)
+
+carriage_constraints = "both_ends"; %or "centre"
 
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2+1;%+0.2;%+1.0;
+s0 = RailLink.L/2;%+1.5;%+2;
 
 tf = 5.0; %simulation time
 dt = 0.005;
@@ -54,21 +56,22 @@ q_guess = q0;
 q_equil = FindEquilibriumFixed( ...
                     RailLinkage,RailCarriage, ...
                     s0,q_guess, ...
-                    T_0_fixed, T_L_fixed);
+                    T_0_fixed, T_L_fixed,carriage_constraints);
+
 [s0_new,~] = ProjectS(RailLinkage,RailCarriage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end),s0+RailCarriage.VLinks(1).L/2);
 
-%q0 = q_equil;
+q0 = q_equil;
 % plotq(RailLinkage,q0(1:RailLinkage.ndof))
 
 x0 = [q0;zeros(ndof,1)];
 
 %Solve DAE
 %[tvec_out, x_out, xdot_out] = ODEKKTSolver(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
-[tvec_out, x_out, xdot_out] = ODESolverFaster(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller );
-
+[tvec_out, x_out, xdot_out] = ODESolverFaster(RailLinkage,RailCarriage,x0,tf,dt,T_0_fixed,T_L_fixed, PD_controller,carriage_constraints );
+%[tvec_out, x_out, xdot_out] =NewmarkKKTSolver(RailLinkage,RailCarriage,x0,tf,0.001,T_0_fixed,T_L_fixed, PD_controller,carriage_constraints );
 %Plot results & animate rail
 
-plotResults(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed)
+plotResults(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed,carriage_constraints)
 animateSystem(RailLinkage, RailCarriage, tvec_out, x_out, PD_controller)
 
 %s_range = RailCarriage.VLinks(1).L/2:1:5.4;
@@ -86,7 +89,7 @@ for i = 1:length(s_range)
     q_equil_full = FindEquilibriumFixed( ...
         RailLinkage, RailCarriage, ...
         s, q_equil_prev, ...
-        T_0_fixed, T_L_fixed);
+        T_0_fixed, T_L_fixed,carriage_constraints);
 
     q_carriage_se3_here = q_equil_full(end-5:end);
 

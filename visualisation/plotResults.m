@@ -1,4 +1,4 @@
-function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed)
+function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, T_L_fixed,carriage_constraints)
 
     % ----------------------------
     % Split state
@@ -151,15 +151,23 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
     % plot Constraint Violations
     ndof_tot = Linkage.ndof+Carriage.ndof;
     % Evaluate once to determine size of e_out
-
-    [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
+    
+    if carriage_constraints == "centre"
+        [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
+    elseif carriage_constraints == "both_ends"
+        [e_out, ~, ~] = ErrorJAtS_both_ends(Linkage, Carriage, s(1), x_sol(1, 1:ndof_tot)',xd_sol(1, 1:ndof_tot)');
+    end
     n_e = length(e_out);
     
     E_out_all = zeros(n_e, N);
     
     % Loop over trajectory
     for k = 1:N
-        [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+        if carriage_constraints == "centre"
+            [e_out, ~, ~] = ErrorJAtS(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+        elseif carriage_constraints == "both_ends"
+            [e_out, ~, ~] = ErrorJAtS_both_ends(Linkage, Carriage, s(k), x_sol(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+        end
         E_out_all(:,k) = e_out(:);
     end
     
@@ -181,3 +189,4 @@ function plotResults(tvec_out, x_sol, xd_sol, dt, Linkage, Carriage, T_0_fixed, 
     print('plots/constraint_violation_mass.png','-dpng','-r300');
     
 end
+

@@ -1,5 +1,5 @@
 
-function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller)
+function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller,carriage_constraints)
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
@@ -8,17 +8,16 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     %Baumgarte Stabilisation parameters
 
      t_baum = 0.1;
-     alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-     beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
-     alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
-     beta =   0.0; %100.0;%0.0;%% stiffness 
+      alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+      beta =   1/(t_baum) ; %100.0;%0.0;%% stiffness 
+     % alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
+     % beta =   0.0; %100.0;%0.0;%% stiffness 
      % W = blkdiag( ...
      %     10*eye(length(err_mass)), ...
      %     eye(length(err0)), ...
      %     eye(length(errL)));
     
-     s_store.last    = Linkage.VLinks(1).L/2;
-     s_store.current = s_store.last;
+     s_prev    = ProjectS(Linkage,Carriage, x0(1:n_beam), x0(n_beam+1:n_beam+n_mass),Linkage.VLinks(1).L/2);
 
     function xd = ode_fun(t, y)
         q     = y(1:n);
@@ -35,9 +34,14 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % solve internal coordinate s
         % ----------------------------
         tic
-        [s_store.current,~] = ProjectS(Linkage,Carriage, q_b, q_mass,s_store.last);
-        s = s_store.current;
-        s_store.last = s_store.current;
+        [s,~] = ProjectS(...
+            Linkage,...
+            Carriage,...
+            q_b,...
+            q_mass,...
+            s_prev);
+
+        s_prev = s;
 
         t_proj = toc;
         %fprintf('t_proj = %e\n', t_proj);
@@ -48,19 +52,20 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
 
         % kinematics
-        %T_rs = FwdKinematicsAtS(Linkage, q_b, s);
-        T_m = variable_expmap_g(q_mass);
-        
         %Compute constraint errors & constraint Jacobians
         tic
         [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
         t_constraints= toc;
-       % fprintf('t_end_constraints = %e\n', t_constraints);
+        %fprintf('t_end_constraints = %e\n', t_constraints);
         tic
-        [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
-        % [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS_both_ends(Linkage, Carriage, s, q, qd);
+        %
+        if carriage_constraints == "both_ends"
+            [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS_both_ends(Linkage, Carriage, s, q, qd);
+        elseif carriage_constraints == "centre"
+            [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
+        end
         % t_constraints= toc;
-       % fprintf('t_s_constraints = %e\n', t_constraints);
+        %fprintf('t_s_constraints = %e\n', t_constraints);
 
         %Jd_mass_full = ErrorJdAtS_FD(Linkage, Carriage, s, q, qd) ; %Ideally replace with analytical Jdot.
         %Jd_mass_full = zeros(size(J_mass_full))
@@ -122,19 +127,35 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     
 
         % Control term
-        nu = 1;
-        Ix = [0;0;0;1;0;0];
-        %Binb = [-JacobianAtS(Linkage,q_b,s)'*Ix ];
-       % Binm = [Ix ];
-        %B_full = [Binb;Binm];
-
+        % nu = 1;
+        % Ix = [0;0;0;1;0;0];
+        % Binb = [-JacobianAtS(Linkage,q_b,s)'*Ix ];
+        % Binm = [Ix ];
+        % B_full = [Binb;Binm];
         % PD controller!
         % example PD + geometry-based term
         %u = PD_carriage_control(Linkage, s, q, qd, controller);
         %u = 10000;
         %u=0.0;
+    
+        %Torsional force:
 
-        %f = g_full + B_full*u;
+        % if t < 0.02
+        %     torsion_tau = 1000000.0;
+        % else
+        %     torsion_tau = 0.0;
+        % end
+        % 
+        % %Ix = [0;0;0;0;0;1];
+        % Ix = [1;0;0;0;0;0];
+        % Binb = zeros(n_beam,1);
+        % Binm = Ix;
+        % % Binb = JacobianAtS(Linkage,q_b,s)'*Ix;
+        % % Binm = Ix;
+        % 
+        % B_full = [Binb;Binm];
+        % 
+        % f = g_full + B_full*torsion_tau;
         tic
         f = g_full;
 
@@ -150,16 +171,17 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
 
         S = diag(1./sqrt(d));
         Ms = S' * M_full * S;
-
-        %fprintf('cond(M)  = %e\n', cond(M_full));
-        %fprintf('cond(Ms) = %e\n', cond(Ms));
+         % 
+         % fprintf('cond(M)  = %e\n', cond(M_full));
+         % fprintf('cond(Ms) = %e\n', cond(Ms)); 
+         % fprintf('cond(Jc)  = %e\n', cond(J_c));
 
         Js = J_c * S;
 
         Minvf = Ms \ (S'*f);
 
         A = Js * (Ms \ Js');
-
+        %fprintf('cond(A)  = %e\n', cond(A))
         b = Js * Minvf - gamma;
 
         lambda = A \ b;
@@ -172,7 +194,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
               qdd];
 
         t_final= toc;
-        %fprintf('t_final = %e\n', t_final);
+        %%fprintf('t_final = %e\n', t_final);
        
     end
     
@@ -182,11 +204,13 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     % ODE options with event function
     % ----------------------------
     %opts = odeset('OutputFcn', @showTime,'Events', @term_condition);
-    opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,y,flag, Linkage, Carriage, s_store));
+    opts = odeset('OutputFcn',  @(t,y,flag) showTime(t,flag, s_prev));
 
     disp("Simulating...");
     
-    [t, x] = ode15s(@ode_fun, tspan, x0, opts);
+    %[t, x] = ode15s(@ode_fun, tspan, x0, opts);
+    [t, x] = ode45(@ode_fun, tspan, x0, opts);
+
     
     % ----------------------------
     % unpack solution
@@ -206,25 +230,47 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     xdot_out = interp1(tvec, xdot_sol, tvec_out, 'linear');
 end
 
-function status = showTime(t, y, flag, Linkage, Carriage, s_store)
-
-   
-    %n_beam = 16; 
-    n_beam = Linkage.ndof;
-
-    n_mass = 6;
-    %disp(['s = ', num2str(s)]);
-    status = 0;
-     if isempty(flag)
-        fprintf('t = %.3f\r', t(end));
-        q_b    = y(1:n_beam);
-        q_mass = y(n_beam+1:n_beam+n_mass);
-
-        % ----------------------------
-        % solve internal coordinate s
-        % ----------------------------
-        %[s,~] = ProjectS(Linkage,Carriage, q_b, q_mass, Linkage.VLinks(1).L/2);
-        fprintf('s = %.3f\r', s_store.last);
-    end
+function status = showTime(t,flag,s_prev)
     
+    persistent next_print timer_start t_last
+    
+    status = 0;
+    
+    if strcmp(flag,'init')
+    
+        timer_start = tic;
+        next_print = 1;
+        t_last = [];
+    
+    elseif isempty(flag)
+    
+        elapsed = toc(timer_start);
+    
+        t_now = t(end);
+    
+        if isempty(t_last)
+            h = NaN;
+        else
+            h = t_now - t_last;
+        end
+    
+        while elapsed >= next_print
+    
+            fprintf(['Real time = %d s, ' ...
+                'Sim time = %.6f s, ' ...
+                'h = %.3e s, ' ...
+                's = %.3f\n'], ...
+                next_print, t_now, h, s_prev);
+    
+            next_print = next_print + 1;
+        end
+    
+        t_last = t_now;
+    
+    elseif strcmp(flag,'done')
+    
+        clear t_last
+    
+    end
+
 end
