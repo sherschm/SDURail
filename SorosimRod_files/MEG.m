@@ -73,20 +73,23 @@ elseif Link.CS=='SDU'   % Channel ("C") section
         w  = w_fn(Xs(ii));
 
         hw = h - 2*tf;
-
+        l_lip = tw;
         % Areas
         A_web = tw*hw;
         A_fl  = w*tf;
+        A_lip = 2*tf*l_lip;
 
-        A = A_web + 2*A_fl;
+        A = A_web + 2*A_fl + A_lip;
 
         % Centroid (z-direction)
         z_web = tw/2;
         z_fl  = tw + (w-tw)/2;
+        z_lip = w - tf/2;      % lip centroid in z-direction
 
         zc = ( ...
             A_web*z_web ...
-            + 2*A_fl*z_fl ) / A;
+            + 2*A_fl*z_fl ...
+            + A_lip*z_lip ) / A;
 
         % Centroidal Iy
         Iy_web = tw*hw^3/12;
@@ -94,54 +97,83 @@ elseif Link.CS=='SDU'   % Channel ("C") section
         Iy_fl_local = w*tf^3/12;
         y_fl = h/2 - tf/2;
 
+        y_lip = h/2 - tf - l_lip/2;
+        Iy_lip_local = tf*l_lip^3/12;
+
         Iy = Iy_web ...
-            + 2*(Iy_fl_local + A_fl*y_fl^2);
+            + 2*(Iy_fl_local + A_fl*y_fl^2) ...
+            + 2*(Iy_lip_local + (tf*l_lip)*y_lip^2);
 
         % Centroidal Iz
         Iz_web_local = hw*tw^3/12;
         Iz_fl_local  = tf*w^3/12;
-
+        Iz_lip_local = l_lip*tf^3/12;
+          
         Iz = ...
             (Iz_web_local + A_web*(z_web-zc)^2) ...
-            + 2*(Iz_fl_local + A_fl*(z_fl-zc)^2);
+            + 2*(Iz_fl_local + A_fl*(z_fl-zc)^2) ...
+            + 2*(Iz_lip_local + (tf*l_lip)*(z_lip - zc)^2);
 
         % Saint-Venant torsion constant
-        % J(ii) = (1/3)*( ...
-        %     2*w*tf^3 ...
-        %     + hw*tw^3 );
+        Jsv = (1/3)*( ...
+            2*w*tf^3 ...
+            + hw*tw^3 );
         
         % Torsional constant computed via Roarks Stress and Strain table 10.3 (1g) 
         t = Link.tw; 
         h_roark = Link.h{1}(0)-t;
         b_roark = Link.w{1}(0)-t/2;
 
-        %Compute K (Table 10.1, 25 (and 24))
-        a_K = (Link.h{1}(0)/2);
-        c_K = (Link.w{1}(0))-t;
-        K_L1 = a_K*t^3*((1/3)-0.21*(t/a_K)*(1-t^4/(12*(a_K^4))));
-        K_L2 = c_K*t^3*((1/3)-0.105*(t/c_K)*(1-t^4/(192*(c_K^4))));
-        % alpha_K = 0.07;
-        % D_K = 0;
-        K_L = K_L1+K_L2;
-        K = 2*K_L;
+        % % FOR CHANNEL (U) Compute K (Table 10.1, 25 (and 24))
+        % a_K = (Link.h{1}(0)/2);
+        % c_K = (Link.w{1}(0))-t;
+        % K_L1 = a_K*t^3*((1/3)-0.21*(t/a_K)*(1-t^4/(12*(a_K^4))));
+        % K_L2 = c_K*t^3*((1/3)-0.105*(t/c_K)*(1-t^4/(192*(c_K^4))));
+        % % alpha_K = 0.07;
+        % % D_K = 0;
+        % K_L = K_L1+K_L2;
+        % K = 2*K_L;
+        % G = Link.G; %CONFIRM!
+        % C_w = (h_roark^2*b_roark^3*t/12)*((2*h_roark+3*b_roark)/(h_roark+6*b_roark));
+        % E =Link.E;
+        % Beta = sqrt(K*G/(C_w*E));
+        % l = Link.L;
+
+        % FOR C-shape Compute K (Table 10.1, 25 (and 24))
+        b1_roark = l_lip+t/2;
+        e_roark = b_roark*(3*h_roark^2*b_roark + 6*h_roark^2*b1_roark-8*b1_roark^3)/(h_roark^3+6*h_roark^2*b_roark + 6*h_roark^2*b1_roark + 8*b1_roark^3 - 12*h_roark* b1_roark^2);
+        K = (t^3/3)*(h_roark+2*b_roark+2*b1_roark);
         G = Link.G; %CONFIRM!
-        C_w = (h_roark^2*b_roark^3*t/12)*((2*h_roark+3*b_roark)/(h_roark+6*b_roark));
+        C_w = t*((h_roark^2*b_roark^2/2)*(b1_roark + b_roark/3 - e_roark - 2*e_roark*b1_roark/b_roark + 2*b1_roark^2/h_roark) ...
+            + (h_roark^2*e_roark^2/2)*(b_roark+b1_roark+h_roark/6 - 2*b1_roark^2/h_roark)+(2*b1_roark^3/3)*(b_roark+e_roark)^2);
         E =Link.E;
         Beta = sqrt(K*G/(C_w*E));
         l = Link.L;
-        
-        J(ii) = l*E*C_w*Beta^3/(4*G*((Beta*l)/4-tanh((Beta*l)/4)));
+
+        % J(ii) = l*E*C_w*Beta^3/(4*G*((Beta*l)/4-tanh((Beta*l)/4)));
+
+        J(ii) = 48*C_w/l^2;
 
         A_p(ii)  = A;
         Iy_p(ii) = Iy;
         Iz_p(ii) = Iz;
         Ix_p(ii) = J(ii);
 
-        esc = ...
-            3*w*tf*(h-tf)^2 / ...
-            (6*w*tf*(h-tf) + hw*tw^2);
+        %For U Channel
+        % esc = ...
+        %     3*w*tf*(h-tf)^2 / ...
+        %     (6*w*tf*(h-tf) + hw*tw^2);
 
-        esc_p(ii) = esc;
+        esc = ...
+            ( 3*w*tf*(h-tf)^2 ...
+            + 6*l_lip*tf*(w-tf/2)*(h-tf) ) ...
+            /( 6*w*tf*(h-tf) ...
+            + 2*l_lip*tf*(h-tf) ...
+            + hw*tw^2 );
+
+        %esc_p(ii) = esc;
+        %esc_p(ii) = 0.0;
+
     end
 end
 
@@ -163,16 +195,19 @@ if Link.CS =='SDU'   % Channel ("C") section
         e = esc_p(ii);
 
         K = zeros(6);
-
-        K(1,1) = G*Js_p(ii) + G*A_p(ii)*e^2;
+        
+        K(1,1) = G*Js_p(ii); %+ G*A_p(ii)*e^2;
 
         K(2,2) = E*Iy_p(ii);
         K(3,3) = E*Iz_p(ii);
 
         K(4,4) = E*A_p(ii);
 
-        K(5,5) = G*A_p(ii);
-        K(6,6) = G*A_p(ii);
+        kappa = 0.3; %Timoshenko shear
+        %kappa = 1.0; %Timoshenko shear
+        
+        K(5,5) = kappa*G*A_p(ii);
+        K(6,6) = kappa*G*A_p(ii);
 
         K(1,6) = -G*A_p(ii)*e;
         K(6,1) = -G*A_p(ii)*e;

@@ -9,6 +9,7 @@ function RailLink = makeRailLink()
     CS = 'SDU'; %'C' for circular, 'R' for circular, 'E' for circular, 'SDU' for the C-rail
     %L = 5.415;
     L = 5.3;
+    L = 5.205;
     %L = 25.415;
     Rho = 7850;
     %Rho = 2700;

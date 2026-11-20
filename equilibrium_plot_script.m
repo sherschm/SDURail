@@ -5,7 +5,7 @@
 addpath(".\data\equil_data\")
 plot_script2_config1
 
-constraint_configs = ["centre"; "both_ends";"three_points"];
+constraint_configs = ["centre"; "both_ends"];
 %constraint_configs = ["centre"; "both_ends";"three_points"];
 names = ["Constraint (a)"; "Constraint (b)"; "Constraint (c)"];
 
@@ -119,19 +119,14 @@ nexttile;
 
 
 for j = 1:length(constraint_configs)
-    % plot(s_range, local_rotation(:,1,j), ...
-    %     '-', ...
-    %     'LineWidth',2.0, ...
-    %     'Color',[0 0.4470 0.7410]);
-    % hold on
-    
+
     % h_pitch = plot(s_range, -local_rotation(:,2,j), ...
     %     styles{j}, ...
     %     'LineWidth',2.0);
 
 
     % Smooth the profile
-    z_smooth = smoothdata(carriage_def(:,3,j),'sgolay',21);
+    z_smooth = smoothdata(carriage_def(:,3,j),'sgolay',501);
     theta = gradient(z_smooth,s_range);
 
     local_rotation_numerical = atan(theta); % radians
@@ -159,6 +154,7 @@ x = z_data(:,1);
 z = z_data(:,2);
 
 % Smooth the profile
+%z_smooth = smoothdata(z,'sgolay',21);
 z_smooth = smoothdata(z,'sgolay',21);
 theta = gradient(z_smooth,x);
 
@@ -305,6 +301,16 @@ for j = 1:length(constraint_configs)
     %leg{end+1} = sprintf('$y$, %s', names{j});
     leg{end+1} = sprintf(names{j});
 end
+
+mean_z_def_ansys = (z_r_data(:,2)+z_l_data(:,2))/2;
+
+h_ansys = plot(z_r_data(:,1), mean_z_def_ansys, ...
+    'o', ...
+    'MarkerSize', 4, ...
+    'Color', c_green);
+h = [h h_ansys];
+leg{end+1} = 'ANSYS';
+
 % h_ansys = plot(z_data(:,1), z_data(:,2), ...
 %     'o', ...
 %     'MarkerSize', 4, ...
@@ -449,6 +455,7 @@ h_ansys = plot(z_r_data(:,1), roll_ansys, ...
     'o', ...
     'MarkerSize', 4, ...
     'Color', c_green);
+leg{end+1} = 'ANSYS';
 
 h = [h h_ansys];
 
