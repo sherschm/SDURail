@@ -308,184 +308,186 @@ classdef SorosimLinkage
                 
                 save('LinkageProgress.mat','Linkage')
     
-                %% closed loop joints
-    
-                prompt           = {'Enter number of independent closed chain joints:'};
-                dlgtitle         = 'Closed Chain';
-                definput         = {'0'};
-                opts.Interpreter = 'tex';
-                ans_act          = inputdlg(prompt,dlgtitle,[1 50],definput,opts);
-                nCLj             = str2double(ans_act{1});
-    
-                if nCLj>0
-    
-                    Linkage.iCLA       = zeros(nCLj,1);
-                    Linkage.iCLA       = zeros(nCLj,1);
-                    Linkage.VRodsCLj = SorosimRod.empty(nCLj,0);
-    
-                    Linkage.gACLj = cell(nCLj,1);
-                    Linkage.gBCLj = cell(nCLj,1);
-    
-                    Phi_p       = cell(nCLj,1);
-                    Linkage.nCLj=0;
-    
-                    for iCL=1:nCLj
-                        UIClosedLoop(Linkage,iCL);
-                        load('Temp_LinkageClosedJoint.mat','iA','iB','RodAB','gACLj','gBCLj')
-    
-                        Linkage.nCLj            = Linkage.nCLj+1;
-                        Linkage.iCLA(iCL)       = iA;
-                        Linkage.iCLB(iCL)       = iB;
-                        Linkage.VRodsCLj(iCL)   = RodAB;
-                        Linkage.gACLj{iCL}      = gACLj;
-                        Linkage.gBCLj{iCL}      = gBCLj;
-    
-                        Phi_here = RodAB.Phi;
-                        dof_here = RodAB.dof;
-    
-                        Phi_piCL = eye(6); % Start with 6x6 identity matrix
-
-                        for id = 1:dof_here % Loop through each column of Phi_here and remove matching columns from Phi_piCL
-                            match_idx = find(all(Phi_piCL == Phi_here(:, id), 1), 1);% Find the matching column index in Phi_piCL
-                            if ~isempty(match_idx)
-                                % Remove the matching column
-                                Phi_piCL(:, match_idx) = [];
-                            end
-                        end
-                        Phi_p{iCL} = Phi_piCL;
-    
-                    end
-    
-                    Linkage.CLprecompute.Phi_p = Phi_p; %Perpendicular basis of the closed loop joint
-                    Linkage.T_BS               = 0.01; %desired settling time constant (Baumgart)
-
-                    %index corresponding to the start of lambda
-    
-                end
+                % %% closed loop joints
+                % 
+                % prompt           = {'Enter number of independent closed chain joints:'};
+                % dlgtitle         = 'Closed Chain';
+                % definput         = {'0'};
+                % opts.Interpreter = 'tex';
+                % ans_act          = inputdlg(prompt,dlgtitle,[1 50],definput,opts);
+                % nCLj             = str2double(ans_act{1});
+                % 
+                % if nCLj>0
+                % 
+                %     Linkage.iCLA       = zeros(nCLj,1);
+                %     Linkage.iCLA       = zeros(nCLj,1);
+                %     Linkage.VRodsCLj = SorosimRod.empty(nCLj,0);
+                % 
+                %     Linkage.gACLj = cell(nCLj,1);
+                %     Linkage.gBCLj = cell(nCLj,1);
+                % 
+                %     Phi_p       = cell(nCLj,1);
+                %     Linkage.nCLj=0;
+                % 
+                %     for iCL=1:nCLj
+                %         UIClosedLoop(Linkage,iCL);
+                %         load('Temp_LinkageClosedJoint.mat','iA','iB','RodAB','gACLj','gBCLj')
+                % 
+                %         Linkage.nCLj            = Linkage.nCLj+1;
+                %         Linkage.iCLA(iCL)       = iA;
+                %         Linkage.iCLB(iCL)       = iB;
+                %         Linkage.VRodsCLj(iCL)   = RodAB;
+                %         Linkage.gACLj{iCL}      = gACLj;
+                %         Linkage.gBCLj{iCL}      = gBCLj;
+                % 
+                %         Phi_here = RodAB.Phi;
+                %         dof_here = RodAB.dof;
+                % 
+                %         Phi_piCL = eye(6); % Start with 6x6 identity matrix
+                % 
+                %         for id = 1:dof_here % Loop through each column of Phi_here and remove matching columns from Phi_piCL
+                %             match_idx = find(all(Phi_piCL == Phi_here(:, id), 1), 1);% Find the matching column index in Phi_piCL
+                %             if ~isempty(match_idx)
+                %                 % Remove the matching column
+                %                 Phi_piCL(:, match_idx) = [];
+                %             end
+                %         end
+                %         Phi_p{iCL} = Phi_piCL;
+                % 
+                %     end
+                % 
+                %     Linkage.CLprecompute.Phi_p = Phi_p; %Perpendicular basis of the closed loop joint
+                %     Linkage.T_BS               = 0.01; %desired settling time constant (Baumgart)
+                % 
+                %     %index corresponding to the start of lambda
+                % 
+                % end
                 close all
                 Linkage.plotq0;
     
                 save('LinkageProgress.mat','Linkage')
                 %% Gravity
+                Linkage.Gravity = true;
+                Linkage.G       = [0 0 0 0 0 -9.81]';
+
+                %quest  = 'Is the system subjected to gravity?';
+                %FG_ANS = questdlg(quest,'Gravity','Yes','No','Yes');
     
-                quest  = 'Is the system subjected to gravity?';
-                FG_ANS = questdlg(quest,'Gravity','Yes','No','Yes');
-    
-                switch FG_ANS
-                    case 'No'
-                        Linkage.Gravity = false;
-                        Linkage.G       = [0 0 0 0 0 -9.81]';
-                    case 'Yes'
-                        Linkage.Gravity = true;
-                        
-                        list  = {'x', 'y', 'z', '-x', '-y','-z'};
-                        G_dir = listdlg('PromptString','Direction of Gravity',...
-                                'SelectionMode','single',...
-                                'ListSize',[160 160],...
-                                'ListString',list,...
-                                'InitialValue',6);
-    
-                        if G_dir==1
-                            G = [0 0 0 9.81 0 0]';
-                        elseif G_dir==2
-                            G = [0 0 0 0 9.81 0]';
-                        elseif G_dir==3
-                            G = [0 0 0 0 0 9.81]';
-                        elseif G_dir==4
-                            G = [0 0 0 -9.81 0 0]';
-                        elseif G_dir==5
-                            G = [0 0 0 0 -9.81 0]';
-                        elseif G_dir==6
-                            G = [0 0 0 0 0 -9.81]';
-                        end
-                        Linkage.G = G;
-                end
+                % switch FG_ANS
+                %     case 'No'
+                %         Linkage.Gravity = false;
+                %         Linkage.G       = [0 0 0 0 0 -9.81]';
+                %     case 'Yes'
+                %         Linkage.Gravity = true;
+                % 
+                %         list  = {'x', 'y', 'z', '-x', '-y','-z'};
+                %         G_dir = listdlg('PromptString','Direction of Gravity',...
+                %                 'SelectionMode','single',...
+                %                 'ListSize',[160 160],...
+                %                 'ListString',list,...
+                %                 'InitialValue',6);
+                % 
+                %         if G_dir==1
+                %             G = [0 0 0 9.81 0 0]';
+                %         elseif G_dir==2
+                %             G = [0 0 0 0 9.81 0]';
+                %         elseif G_dir==3
+                %             G = [0 0 0 0 0 9.81]';
+                %         elseif G_dir==4
+                %             G = [0 0 0 -9.81 0 0]';
+                %         elseif G_dir==5
+                %             G = [0 0 0 0 -9.81 0]';
+                %         elseif G_dir==6
+                %             G = [0 0 0 0 0 -9.81]';
+                %         end
+                %         Linkage.G = G;
+                % end
     
                 close all
                 Linkage.plotq0;
                 %% Concentrated Point Force Fp 
-
-                prompt           = {'Number of point forces/moments (wrenches)'};
-                dlgtitle         = 'Number';
-                definput         = {'0'};
-                opts.Interpreter = 'tex';
-                opts.WindowStyle = 'Normal';
-                Fp_ans           = inputdlg(prompt,dlgtitle,[1 50],definput,opts);
-
-                np       = str2double(Fp_ans{1});
+                % 
+                % prompt           = {'Number of point forces/moments (wrenches)'};
+                % dlgtitle         = 'Number';
+                % definput         = {'0'};
+                % opts.Interpreter = 'tex';
+                % opts.WindowStyle = 'Normal';
+                % Fp_ans           = inputdlg(prompt,dlgtitle,[1 50],definput,opts);
+                np = 0;
+                %np       = str2double(Fp_ans{1});
                 Linkage.Fp_loc = cell(np,1);
                 Linkage.Fp_vec = cell(np,1);
                 Linkage.np     = 0;
                 
                 Linkage.LocalWrench = ones(1,np);
                 
-                for iCLj=1:np
-
-                    quest  = ['Is wrench ', num2str(iCLj),' a local wrench?'];
-                    Follow_ANS = questdlg(quest,'Local or Global','Yes','No','No');
-
-                    switch Follow_ANS
-
-                        case 'No'
-                            Linkage.LocalWrench(iCLj)= false;
-                        case 'Yes'
-                            Linkage.LocalWrench(iCLj) = true;
-                    end
-
-                    vrgood=false;
-                    while ~vrgood
-                        prompt           = {'Link number (choose from figure) corresponding to the point of application of force/moment '...
-                                            ,'Division number (keep 1 for Rigid Link)','Position [0-1], (only for Soft Link) '...
-                                            ,'M_x (Nm) as a function of t (s)','M_y (Nm) as a function of t (s)','M_z (Nm) as a function of t (s)'...
-                                            ,'F_x (N) as a function of t (s)','F_y (N) as a function of t (s)','F_z (N) as a function of t (s)'};
-                        dlgtitle         = ['Point Wrench',num2str(iCLj)];
-                        definput         = {num2str(Linkage.N),'1','1','0','0','0','0','1','0'};
-                        opts.Interpreter = 'tex';
-                        Fp_ans           = inputdlg(prompt,dlgtitle,[1 75],definput,opts);
-
-                        linknum = eval(Fp_ans{1});
-                        divnum  = eval(Fp_ans{2});
-                        X1 = eval(Fp_ans{3}); 
-                        if linknum<=Linkage.N&&linknum>0
-                            if Linkage.VLinks(Linkage.LinkIndex(linknum)).linktype=='r'
-                                divmax = 1;
-                            else
-                                divmax = Linkage.VLinks(Linkage.LinkIndex(linknum)).npie-1;
-                            end
-                            if divnum<=divmax&&divnum>0&&X1>=0&&X1<=1
-                                vrgood=true;
-                            end
-                        end
-                        if ~vrgood
-                            uiwait(msgbox('WRONG INPUTS','Error','error'))
-                        else
-                            if Linkage.VLinks(Linkage.LinkIndex(linknum)).linktype=='s'
-                                Linkage.CVRods{linknum}(divnum+1).Xadd = [Linkage.CVRods{linknum}(divnum+1).Xadd;X1];
-                            end
-                        end
-
-                    end
-
-                    Linkage.Fp_loc{iCLj} = [linknum divnum X1];
-
-                    syms t;
-                    Mxs = str2sym(Fp_ans{4});
-                    Mys = str2sym(Fp_ans{5});
-                    Mzs = str2sym(Fp_ans{6});
-                    Fxs = str2sym(Fp_ans{7});
-                    Fys = str2sym(Fp_ans{8});
-                    Fzs = str2sym(Fp_ans{9});
-                    Fps = [Mxs,Mys,Mzs,Fxs,Fys,Fzs]';
-
-                    if any(has(Fps,t))
-                        Linkage.Fp_vec{iCLj} = matlabFunction(Fps);
-                    else
-                        Linkage.Fp_vec{iCLj} = str2func(['@(t) [' num2str(double(Fps')) ']''']);
-                    end
-                    Linkage.np=Linkage.np+1;
-
-                end
-                Linkage.Fp_sig = PointWrenchPoints(Linkage);
+                % for iCLj=1:np
+                % 
+                %     quest  = ['Is wrench ', num2str(iCLj),' a local wrench?'];
+                %     Follow_ANS = questdlg(quest,'Local or Global','Yes','No','No');
+                % 
+                %     switch Follow_ANS
+                % 
+                %         case 'No'
+                %             Linkage.LocalWrench(iCLj)= false;
+                %         case 'Yes'
+                %             Linkage.LocalWrench(iCLj) = true;
+                %     end
+                % 
+                %     vrgood=false;
+                %     while ~vrgood
+                %         prompt           = {'Link number (choose from figure) corresponding to the point of application of force/moment '...
+                %                             ,'Division number (keep 1 for Rigid Link)','Position [0-1], (only for Soft Link) '...
+                %                             ,'M_x (Nm) as a function of t (s)','M_y (Nm) as a function of t (s)','M_z (Nm) as a function of t (s)'...
+                %                             ,'F_x (N) as a function of t (s)','F_y (N) as a function of t (s)','F_z (N) as a function of t (s)'};
+                %         dlgtitle         = ['Point Wrench',num2str(iCLj)];
+                %         definput         = {num2str(Linkage.N),'1','1','0','0','0','0','1','0'};
+                %         opts.Interpreter = 'tex';
+                %         Fp_ans           = inputdlg(prompt,dlgtitle,[1 75],definput,opts);
+                % 
+                %         linknum = eval(Fp_ans{1});
+                %         divnum  = eval(Fp_ans{2});
+                %         X1 = eval(Fp_ans{3}); 
+                %         if linknum<=Linkage.N&&linknum>0
+                %             if Linkage.VLinks(Linkage.LinkIndex(linknum)).linktype=='r'
+                %                 divmax = 1;
+                %             else
+                %                 divmax = Linkage.VLinks(Linkage.LinkIndex(linknum)).npie-1;
+                %             end
+                %             if divnum<=divmax&&divnum>0&&X1>=0&&X1<=1
+                %                 vrgood=true;
+                %             end
+                %         end
+                %         if ~vrgood
+                %             uiwait(msgbox('WRONG INPUTS','Error','error'))
+                %         else
+                %             if Linkage.VLinks(Linkage.LinkIndex(linknum)).linktype=='s'
+                %                 Linkage.CVRods{linknum}(divnum+1).Xadd = [Linkage.CVRods{linknum}(divnum+1).Xadd;X1];
+                %             end
+                %         end
+                % 
+                %     end
+                % 
+                %     Linkage.Fp_loc{iCLj} = [linknum divnum X1];
+                % 
+                %     syms t;
+                %     Mxs = str2sym(Fp_ans{4});
+                %     Mys = str2sym(Fp_ans{5});
+                %     Mzs = str2sym(Fp_ans{6});
+                %     Fxs = str2sym(Fp_ans{7});
+                %     Fys = str2sym(Fp_ans{8});
+                %     Fzs = str2sym(Fp_ans{9});
+                %     Fps = [Mxs,Mys,Mzs,Fxs,Fys,Fzs]';
+                % 
+                %     if any(has(Fps,t))
+                %         Linkage.Fp_vec{iCLj} = matlabFunction(Fps);
+                %     else
+                %         Linkage.Fp_vec{iCLj} = str2func(['@(t) [' num2str(double(Fps')) ']''']);
+                %     end
+                %     Linkage.np=Linkage.np+1;
+                % 
+                % end
+                % Linkage.Fp_sig = PointWrenchPoints(Linkage);
 
                 save('LinkageProgress.mat','Linkage')
 
@@ -494,102 +496,106 @@ classdef SorosimLinkage
                 close all
                 Linkage.plotq0;
                 
-    
-                quest  = 'Is the system Actuated?';
-                Answer = questdlg(quest,'Actuation','Yes','No','Yes');
-    
-                switch Answer
-                    case 'No'
-                        Linkage.Actuated = false;
-                        Linkage.nact     = 0;
-                        Linkage.n_jact   = 0;
-                        Linkage.WrenchControlled  = true;
-                    case 'Yes'
-                        if exist('CablePoints.mat','file')
-                            delete('CablePoints.mat')
-                        end
-                        n_sact=0;
-    
-                        [n_jact,i_jact,i_jactq,WrenchControlled,Bj1] = JointActuation(Linkage,false);
-    
-                        Linkage.n_jact          = n_jact;
-                        Linkage.nact            = n_jact; %will update later
-                        Linkage.i_jact          = i_jact;
-                        Linkage.N_jact          = length(i_jact);
-                        Linkage.i_jactq           = i_jactq;
-                        Linkage.WrenchControlled  = WrenchControlled;
-                        Linkage.Bj1              = Bj1;
-                        Linkage.Actuated          = true;
+                Linkage.Actuated = false;
+                Linkage.nact     = 0;
+                Linkage.n_jact   = 0;
+                Linkage.WrenchControlled  = true;
 
-                        [n_k,index_q_u,index_q_k,index_u_k,index_u_u] = JointConstraintPrecompute(Linkage);
-                        [ij_act,i_sig_act] = ActuatedJointIndex(Linkage);
-
-                        Linkage.ActuationPrecompute.n_k = n_k; %for length controlled soft also (future version)
-                        Linkage.ActuationPrecompute.index_q_u = index_q_u;
-                        Linkage.ActuationPrecompute.index_q_k = index_q_k;
-                        Linkage.ActuationPrecompute.index_u_k = index_u_k; %change when soft actuators are added
-                        Linkage.ActuationPrecompute.index_u_u = index_u_u; %for length controlled soft also (future version)
-                        Linkage.ActuationPrecompute.ij_act = ij_act;
-                        Linkage.ActuationPrecompute.i_sig_act = i_sig_act;
-    
-                        if n_jact>0
-                            close all
-                            Linkage.plotq0;
-                        end
-
-
-                        %Soft link actuation
-                        if any(Linkage.linktype=='s')
-    
-                            if all(Linkage.jointtype=='N')
-                                Answer2='Yes';
-                            else
-                                quest   = 'Is (Are) the soft link(s) actuated?';
-                                Answer2 = questdlg(quest,'Actuation','Yes','No','No');
-                            end
-    
-                            switch Answer2
-    
-                                case 'Yes'
-    
-                                    [n_sact,dc_fn,dcp_fn,dc,dcp,Sdiv,Ediv] = CableActuation(Linkage);
-    
-                                    Linkage.dc     = dc;
-                                    Linkage.dcp    = dcp;
-                                    Linkage.Sdiv   = Sdiv;
-                                    Linkage.Ediv   = Ediv;
-                                    CableFunction.dc_fn=dc_fn;
-                                    CableFunction.dcp_fn=dcp_fn;
-                                    Linkage.CableFunction = CableFunction;
-                                    
-                                    N = Linkage.N; %repeat but may need
-                                    i_sact = cell(N, 1); %indexes of soft actuators for every link and division syntax i_sact{i}{j}
-                                    for i = 1:N
-                                        if Linkage.VLinks(Linkage.LinkIndex(i)).linktype=='s'
-                                            ndiv = Linkage.VLinks(Linkage.LinkIndex(i)).npie-1; 
-                                            i_sact{i} = cell(1, ndiv);
-                                            for j = 1:ndiv
-                                                actuator_indices = zeros(1,n_sact); % if present the index otherwise zero
-                                                for ia = 1:n_sact
-                                                    if ~isempty(dc{ia, i}) && ~isempty(dc{ia, i}{j})
-                                                        actuator_indices(ia) = ia;
-                                                    end
-                                                end
-                                                i_sact{i}{j} = nonzeros(actuator_indices)'; % Store the non-empty ia indices for the current i, j
-                                            end
-                                        end
-                                    end
-                                    Linkage.i_sact = i_sact;
-    
-                                case 'No'
-                                    n_sact = 0;
-                            end
-                        end
-    
-                        Linkage.n_sact = n_sact;
-                        Linkage.nact   = n_jact+n_sact;
-                        Linkage.ActuationPrecompute.index_u_k = [Linkage.ActuationPrecompute.index_u_k, Linkage.n_jact+1:Linkage.nact]; %including index of known soft actuator input force
-                end
+                % quest  = 'Is the system Actuated?';
+                % Answer = questdlg(quest,'Actuation','Yes','No','Yes');
+                % 
+                % switch Answer
+                %     case 'No'
+                %         Linkage.Actuated = false;
+                %         Linkage.nact     = 0;
+                %         Linkage.n_jact   = 0;
+                %         Linkage.WrenchControlled  = true;
+                %     case 'Yes'
+                %         if exist('CablePoints.mat','file')
+                %             delete('CablePoints.mat')
+                %         end
+                %         n_sact=0;
+                % 
+                %         [n_jact,i_jact,i_jactq,WrenchControlled,Bj1] = JointActuation(Linkage,false);
+                % 
+                %         Linkage.n_jact          = n_jact;
+                %         Linkage.nact            = n_jact; %will update later
+                %         Linkage.i_jact          = i_jact;
+                %         Linkage.N_jact          = length(i_jact);
+                %         Linkage.i_jactq           = i_jactq;
+                %         Linkage.WrenchControlled  = WrenchControlled;
+                %         Linkage.Bj1              = Bj1;
+                %         Linkage.Actuated          = true;
+                % 
+                %         [n_k,index_q_u,index_q_k,index_u_k,index_u_u] = JointConstraintPrecompute(Linkage);
+                %         [ij_act,i_sig_act] = ActuatedJointIndex(Linkage);
+                % 
+                %         Linkage.ActuationPrecompute.n_k = n_k; %for length controlled soft also (future version)
+                %         Linkage.ActuationPrecompute.index_q_u = index_q_u;
+                %         Linkage.ActuationPrecompute.index_q_k = index_q_k;
+                %         Linkage.ActuationPrecompute.index_u_k = index_u_k; %change when soft actuators are added
+                %         Linkage.ActuationPrecompute.index_u_u = index_u_u; %for length controlled soft also (future version)
+                %         Linkage.ActuationPrecompute.ij_act = ij_act;
+                %         Linkage.ActuationPrecompute.i_sig_act = i_sig_act;
+                % 
+                %         if n_jact>0
+                %             close all
+                %             Linkage.plotq0;
+                %         end
+                % 
+                % 
+                %         %Soft link actuation
+                %         if any(Linkage.linktype=='s')
+                % 
+                %             if all(Linkage.jointtype=='N')
+                %                 Answer2='Yes';
+                %             else
+                %                 quest   = 'Is (Are) the soft link(s) actuated?';
+                %                 Answer2 = questdlg(quest,'Actuation','Yes','No','No');
+                %             end
+                % 
+                %             switch Answer2
+                % 
+                %                 case 'Yes'
+                % 
+                %                     [n_sact,dc_fn,dcp_fn,dc,dcp,Sdiv,Ediv] = CableActuation(Linkage);
+                % 
+                %                     Linkage.dc     = dc;
+                %                     Linkage.dcp    = dcp;
+                %                     Linkage.Sdiv   = Sdiv;
+                %                     Linkage.Ediv   = Ediv;
+                %                     CableFunction.dc_fn=dc_fn;
+                %                     CableFunction.dcp_fn=dcp_fn;
+                %                     Linkage.CableFunction = CableFunction;
+                % 
+                %                     N = Linkage.N; %repeat but may need
+                %                     i_sact = cell(N, 1); %indexes of soft actuators for every link and division syntax i_sact{i}{j}
+                %                     for i = 1:N
+                %                         if Linkage.VLinks(Linkage.LinkIndex(i)).linktype=='s'
+                %                             ndiv = Linkage.VLinks(Linkage.LinkIndex(i)).npie-1; 
+                %                             i_sact{i} = cell(1, ndiv);
+                %                             for j = 1:ndiv
+                %                                 actuator_indices = zeros(1,n_sact); % if present the index otherwise zero
+                %                                 for ia = 1:n_sact
+                %                                     if ~isempty(dc{ia, i}) && ~isempty(dc{ia, i}{j})
+                %                                         actuator_indices(ia) = ia;
+                %                                     end
+                %                                 end
+                %                                 i_sact{i}{j} = nonzeros(actuator_indices)'; % Store the non-empty ia indices for the current i, j
+                %                             end
+                %                         end
+                %                     end
+                %                     Linkage.i_sact = i_sact;
+                % 
+                %                 case 'No'
+                %                     n_sact = 0;
+                %             end
+                %         end
+                % 
+                %         Linkage.n_sact = n_sact;
+                %         Linkage.nact   = n_jact+n_sact;
+                %         Linkage.ActuationPrecompute.index_u_k = [Linkage.ActuationPrecompute.index_u_k, Linkage.n_jact+1:Linkage.nact]; %including index of known soft actuator input force
+                % end
                 Linkage.CA  = false; %custom internal actuation force
                 Linkage.CAI = false; %custom actuation strength
 

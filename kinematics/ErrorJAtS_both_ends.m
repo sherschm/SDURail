@@ -59,34 +59,6 @@ T_s2 = FwdKinematicsAtS(Linkage, q_b, s2);
 Tm_1 = T_m*T_1_offset;
 Tm_2 = T_m*T_2_offset;
 
-% Ad_offset_1 = dinamico_Adjoint(ginv(T_1_offset));
-% 
-% Jm_1_WRONG = Ad_offset_1*Jm_WRONG;
-% Jmd_1_WRONG = Ad_offset_1*Jmd_WRONG;
-% 
-% Jm_1 = zeros(6,6);
-% Jm_1(1:3,1:3) = Jm_1_WRONG(1:3,1:3)';
-% Jm_1(4:6,4:6) = Jm_1_WRONG(4:6,4:6)';
-% Jm_1(4:6,1:3) = Jm_1_WRONG(4:6,1:3)';
-% Jmd_1 = zeros(6,6);
-% Jmd_1(1:3,1:3) = Jmd_1_WRONG(1:3,1:3)';
-% Jmd_1(4:6,4:6) = Jmd_1_WRONG(4:6,4:6)';
-% Jmd_1(4:6,1:3) = Jmd_1_WRONG(4:6,1:3)';
-% 
-
-% Ad_offset_2 = dinamico_Adjoint(ginv(T_2_offset));
-% Jm_2_WRONG = Ad_offset_2*Jm_WRONG;
-% Jmd_2_WRONG = Ad_offset_2*Jmd_WRONG;
-% 
-% Jm_2 = zeros(6,6);
-% Jm_2(1:3,1:3) = Jm_2_WRONG(1:3,1:3)';
-% Jm_2(4:6,4:6) = Jm_2_WRONG(4:6,4:6)';
-% Jm_2(4:6,1:3) = Jm_2_WRONG(4:6,1:3)';
-% Jmd_2 = zeros(6,6);
-% Jmd_2(1:3,1:3) = Jmd_2_WRONG(1:3,1:3)';
-% Jmd_2(4:6,4:6) = Jmd_2_WRONG(4:6,4:6)';
-% Jmd_2(4:6,1:3) = Jmd_2_WRONG(4:6,1:3)';
-
 Ad_offset_1 = dinamico_Adjoint(ginv(T_1_offset));
 Ad_offset_2 = dinamico_Adjoint(ginv(T_2_offset));
 Jm = zeros(6,6);

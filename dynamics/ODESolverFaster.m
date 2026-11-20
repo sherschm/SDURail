@@ -1,5 +1,5 @@
 
-function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller,carriage_constraints)
+function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller,carriage_constraints)
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
@@ -8,10 +8,10 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
     %Baumgarte Stabilisation parameters
 
      t_baum = 0.1;
-      alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-      beta =   1/(t_baum) ; %100.0;%0.0;%% stiffness 
-     % alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
-     % beta =   0.0; %100.0;%0.0;%% stiffness 
+      % alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+      % beta =   1/(t_baum) ; %100.0;%0.0;%% stiffness 
+     alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
+     beta =   0.0; %100.0;%0.0;%% stiffness 
      % W = blkdiag( ...
      %     10*eye(length(err_mass)), ...
      %     eye(length(err0)), ...
@@ -63,6 +63,8 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
             [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS_both_ends(Linkage, Carriage, s, q, qd);
         elseif carriage_constraints == "centre"
             [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS(Linkage, Carriage, s, q, qd);
+        elseif carriage_constraints == "three_points"
+            [err_mass, J_mass_full, Jd_mass_full] = ErrorJAtS_three_points(Linkage, Carriage, s, q, qd);
         end
         % t_constraints= toc;
         %fprintf('t_s_constraints = %e\n', t_constraints);
@@ -75,55 +77,47 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         %Cm =  dinamico_coadj(qd_mass) * Mm  ;
         %gm =  Mm * dinamico_Adjoint(ginv(T_m)) * Linkage.G;
         % Build full constraint Jacobians
-        J_c = [J_mass_full; % free to move along x
-                J0;
-               JL];
+        J_c = [J_mass_full; J0; JL];
 
-        Jd_c = [Jd_mass_full;
-                Jd0; %; % free to move along x
-               JdL];
+        Jd_c = [Jd_mass_full; Jd0; JdL];
 
-        
-        err_pos = [err_mass;
-                    err0;
-                    errL];
+        err_pos = [err_mass; err0; errL];
         
         err_vel = J_c * qd;
         
         %Build dynamics terms
         tic
-        g_full = zeros(n,1);
         C_full = zeros(n,1);
         g_full = zeros(n,1);
         
-        % [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
-        % [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
-        % C_full(n_beam+1:end) = Cm*qd_mass;
-        % M_full = zeros(n,n);
-        % M_full(1:n_beam,1:n_beam) = Mb;
-        % M_full(n_beam+1:end,n_beam+1:end) = Mm;
-        % g_full(1:n_beam) = -ID_no_Mqdd + tau;
-        % g_full(n_beam+1:end) = -ID_no_Mqddm + taum;
-
-
+        [ID_no_Mqdd, tau, e, dID_dq, Cb, Mb] = DAEJacobians(Linkage,0.0,q_b,qd_b,zeros(Linkage.ndof,1),[],[],[]);
+        [ID_no_Mqddm, taum, em, dID_dqm, Cm, Mm] = DAEJacobians(Carriage,0.0,q_mass,qd_mass,zeros(Carriage.ndof,1),[],[],[]);
+        C_full(n_beam+1:end) = Cm*qd_mass;
         M_full = zeros(n,n);
-        M_full(1:n_beam,1:n_beam) = GeneralizedMassMatrix_corrected(Linkage,q_b);
-        M_full(n_beam+1:end,n_beam+1:end) = GeneralizedMassMatrix_corrected(Carriage,q_mass);
-        g_full(1:n_beam) = -dynamicsResidual( ...
-            Linkage,...
-            0.0,...
-            [q_b;
-            qd_b;
-            zeros(n_beam,1)]);
-        t_dyn= toc;
-        %fprintf('t_dyn = %e\n', t_dyn);
+        M_full(1:n_beam,1:n_beam) = Mb;
+        M_full(n_beam+1:end,n_beam+1:end) = Mm;
+        g_full(1:n_beam) = -ID_no_Mqdd + tau;
+        g_full(n_beam+1:end) = -ID_no_Mqddm + taum;
 
-        g_full(n_beam+1:n) = -dynamicsResidual( ...
-                        Carriage,...
-                        0.0,...
-                        [q_mass;
-                        qd_mass;
-                        zeros(n_mass,1)]);
+
+        % M_full = zeros(n,n);
+        % M_full(1:n_beam,1:n_beam) = GeneralizedMassMatrix_corrected(Linkage,q_b);
+        % M_full(n_beam+1:end,n_beam+1:end) = GeneralizedMassMatrix_corrected(Carriage,q_mass);
+        % g_full(1:n_beam) = -dynamicsResidual( ...
+        %     Linkage,...
+        %     0.0,...
+        %     [q_b;
+        %     qd_b;
+        %     zeros(n_beam,1)]);
+        % t_dyn= toc;
+        % %fprintf('t_dyn = %e\n', t_dyn);
+        % 
+        % g_full(n_beam+1:n) = -dynamicsResidual( ...
+        %                 Carriage,...
+        %                 0.0,...
+        %                 [q_mass;
+        %                 qd_mass;
+        %                 zeros(n_mass,1)]);
     
 
         % Control term
@@ -141,11 +135,11 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         %Torsional force:
 
         % if t < 0.02
-        %     torsion_tau = 1000000.0;
+        %     torsion_tau = 100000000.0;
         % else
         %     torsion_tau = 0.0;
         % end
-        % 
+
         % %Ix = [0;0;0;0;0;1];
         % Ix = [1;0;0;0;0;0];
         % Binb = zeros(n_beam,1);
@@ -156,7 +150,7 @@ function [tvec_out, x_out, xdot_out] = ODEKKTSolver(Linkage,Carriage,x0,tf,dt,T_
         % B_full = [Binb;Binm];
         % 
         % f = g_full + B_full*torsion_tau;
-        tic
+        % tic
         f = g_full;
 
         gamma = -Jd_c*qd - alpha*err_vel - beta*err_pos;

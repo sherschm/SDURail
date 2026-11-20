@@ -59,10 +59,13 @@ elseif Link.CS=='SDU'   % Channel ("C") section
     tw = Link.tw;
     tf = Link.tf;
 
+    J  = zeros(np,1);
     A_p  = zeros(np,1);
     Iy_p = zeros(np,1);
     Iz_p = zeros(np,1);
     Ix_p = zeros(np,1);
+
+    esc_p = zeros(np,1); % shear offset
 
     for ii = 1:np
 
@@ -103,16 +106,43 @@ elseif Link.CS=='SDU'   % Channel ("C") section
             + 2*(Iz_fl_local + A_fl*(z_fl-zc)^2);
 
         % Saint-Venant torsion constant
-        J = (1/3)*( ...
-            2*w*tf^3 ...
-            + hw*tw^3 );
+        % J(ii) = (1/3)*( ...
+        %     2*w*tf^3 ...
+        %     + hw*tw^3 );
+        
+        % Torsional constant computed via Roarks Stress and Strain table 10.3 (1g) 
+        t = Link.tw; 
+        h_roark = Link.h{1}(0)-t;
+        b_roark = Link.w{1}(0)-t/2;
+
+        %Compute K (Table 10.1, 25 (and 24))
+        a_K = (Link.h{1}(0)/2);
+        c_K = (Link.w{1}(0))-t;
+        K_L1 = a_K*t^3*((1/3)-0.21*(t/a_K)*(1-t^4/(12*(a_K^4))));
+        K_L2 = c_K*t^3*((1/3)-0.105*(t/c_K)*(1-t^4/(192*(c_K^4))));
+        % alpha_K = 0.07;
+        % D_K = 0;
+        K_L = K_L1+K_L2;
+        K = 2*K_L;
+        G = Link.G; %CONFIRM!
+        C_w = (h_roark^2*b_roark^3*t/12)*((2*h_roark+3*b_roark)/(h_roark+6*b_roark));
+        E =Link.E;
+        Beta = sqrt(K*G/(C_w*E));
+        l = Link.L;
+        
+        J(ii) = l*E*C_w*Beta^3/(4*G*((Beta*l)/4-tanh((Beta*l)/4)));
 
         A_p(ii)  = A;
         Iy_p(ii) = Iy;
         Iz_p(ii) = Iz;
-        Ix_p(ii) = J;
+        Ix_p(ii) = J(ii);
+
+        esc = ...
+            3*w*tf*(h-tf)^2 / ...
+            (6*w*tf*(h-tf) + hw*tw^2);
+
+        esc_p(ii) = esc;
     end
-    
 end
 
 Ms = zeros(6*np,6); %inertia
@@ -123,12 +153,39 @@ Rho  = Link.Rho;
 G    = Link.G;
 E    = Link.E;
 Eta  = Link.Eta;
-for ii=1:np
-    Ms((ii-1)*6+1:ii*6,:) = Rho*diag([Ix_p(ii),Iy_p(ii),Iz_p(ii),A_p(ii),A_p(ii),A_p(ii)]);
-    Es((ii-1)*6+1:ii*6,:) = diag([G*Ix_p(ii),E*Iy_p(ii),E*Iz_p(ii),E*A_p(ii),G*A_p(ii),G*A_p(ii)]);
-    Gs((ii-1)*6+1:ii*6,:) = Eta*diag([Ix_p(ii),3*Iy_p(ii),3*Iz_p(ii),3*A_p(ii),A_p(ii),A_p(ii)]);
-end
-   
+if Link.CS =='SDU'   % Channel ("C") section
 
+    Jm_p = Iy_p + Iz_p;   % mass polar inertia
+    Js_p = J;             % Saint-Venant torsion constant
+    for ii=1:np
+        Ms((ii-1)*6+1:ii*6,:) = Rho*diag([Jm_p(ii),Iy_p(ii),Iz_p(ii),A_p(ii),A_p(ii),A_p(ii)]);
+        %Es((ii-1)*6+1:ii*6,:) = diag([G*Js_p(ii),E*Iy_p(ii),E*Iz_p(ii),E*A_p(ii),G*A_p(ii),G*A_p(ii)]);
+        e = esc_p(ii);
+
+        K = zeros(6);
+
+        K(1,1) = G*Js_p(ii) + G*A_p(ii)*e^2;
+
+        K(2,2) = E*Iy_p(ii);
+        K(3,3) = E*Iz_p(ii);
+
+        K(4,4) = E*A_p(ii);
+
+        K(5,5) = G*A_p(ii);
+        K(6,6) = G*A_p(ii);
+
+        K(1,6) = -G*A_p(ii)*e;
+        K(6,1) = -G*A_p(ii)*e;
+
+        Es((ii-1)*6+1:ii*6,:) = K;
+    end
+
+else
+    for ii=1:np
+        Ms((ii-1)*6+1:ii*6,:) = Rho*diag([Ix_p(ii),Iy_p(ii),Iz_p(ii),A_p(ii),A_p(ii),A_p(ii)]);
+        Es((ii-1)*6+1:ii*6,:) = diag([G*Ix_p(ii),E*Iy_p(ii),E*Iz_p(ii),E*A_p(ii),G*A_p(ii),G*A_p(ii)]);
+        Gs((ii-1)*6+1:ii*6,:) = Eta*diag([Ix_p(ii),3*Iy_p(ii),3*Iz_p(ii),3*A_p(ii),A_p(ii),A_p(ii)]);
+    end
+end
 
 %eof

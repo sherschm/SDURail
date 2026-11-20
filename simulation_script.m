@@ -11,22 +11,29 @@ addpath('controllers')
 
 %import properties of deformable Rail
 run("RailParameters.m")
-%run("CarriageParameters.m")
-run("CarriageParameters_Offset.m")
+
+carriage_type = "b"; %or "centre"%"three_points";%
+if carriage_type == "b"
+    run("CarriageParameters_Offset.m")
+elseif  carriage_type == "a"
+    run("CarriageParameters.m")
+end
+
 
 % plot the chosen strain shape functions
 plotStrainBasis(RailLinkage)
+%%
 
-carriage_constraints = "both_ends"; %or "centre"
+carriage_constraints = "both_ends"; %or "centre"%"three_points";%
 
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
 % Define Initial Conditions & Sim params
 q_b0 = zeros(RailLinkage.ndof,1); % initial coordinates of rail
-s0 = RailLink.L/2+1.5;%+2;
+s0 = RailLink.L/2;%+1.5;%+2;
 
 tf = 5.0; %simulation time
-dt = 0.005;
+dt = 0.001;
 
 tf = 1.0; %simulation time
 
@@ -57,12 +64,19 @@ q_equil = FindEquilibriumFixed( ...
                     RailLinkage,RailCarriage, ...
                     s0,q_guess, ...
                     T_0_fixed, T_L_fixed,carriage_constraints);
+plotSystem(RailLinkage,RailCarriage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end))
+title(append('Payload configuration (',carriage_type,')'),'Interpreter','latex','Interpreter','latex', ...
+    'Color','k');
+
+exportgraphics(gcf, ...
+    append('plots/equil_config_',carriage_type,'.pdf'));
+
 
 [s0_new,~] = ProjectS(RailLinkage,RailCarriage,q_equil(1:RailLinkage.ndof),q_equil(RailLinkage.ndof+1:end),s0+RailCarriage.VLinks(1).L/2);
 
-q0 = q_equil;
+%q0 = q_equil;
 % plotq(RailLinkage,q0(1:RailLinkage.ndof))
-
+%%
 x0 = [q0;zeros(ndof,1)];
 
 %Solve DAE
@@ -72,5 +86,17 @@ x0 = [q0;zeros(ndof,1)];
 %Plot results & animate rail
 plotResults(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed,carriage_constraints)
 animateSystem(RailLinkage, RailCarriage, tvec_out, x_out, PD_controller)
+
+%compute free response FFT of the carriage motion.
+carriage_motion = x_out(:,end-5:end);
+%carriage_motion = x_out(:,end); % z only
+carriage_motion = x_out(:,end-5:end);
+
+dynamics_plot_script
+
+% Linearise and compute natural freqs.
+%f = ComputeNaturalFrequencies( RailLinkage, RailCarriage, s,q_guess,T_0_fixed, T_L_fixed,carriage_constraints);
+
+%%
 
 equilibrium_plot_script

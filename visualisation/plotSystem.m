@@ -4,7 +4,8 @@ close all
 
 PlotParameters = Linkage.PlotParameters;
 
-figure(1);
+figure('Color','w'); 
+
 clf
 
 set(gca,...
@@ -17,6 +18,13 @@ if PlotParameters.Light
     camlight(PlotParameters.Az_light, ...
         PlotParameters.El_light)
 end
+
+ax = gca;
+
+ax.Color = 'w';
+ax.XColor = 'k';
+ax.YColor = 'k';
+ax.ZColor = 'k';
 
 axis equal
 grid on
@@ -39,7 +47,7 @@ axis([ ...
     -2*Linkage.VLinks.h{1}(0) 2*Linkage.VLinks.h{1}(0) ...
     -2*Linkage.VLinks.w{1}(0) 2*Linkage.VLinks.w{1}(0)]);
 
-title('Rail configuration')
+%title('Rail configuration')
 
 % Rail
 plotCRail(Linkage,q);
@@ -51,8 +59,7 @@ plotLinkage(Carriage,q_mass);
 g_s_end = variable_expmap_g(q_mass);
 gi = Carriage.VLinks(1).gi;
 g_s= g_s_end*gi;
-plotFrame(g_s)
-
+%plotFrame(g_s)
 
 % Projected frame on rail
 s_proj = ProjectS( ...
@@ -63,7 +70,7 @@ s_proj = ProjectS( ...
     Linkage.VLinks(1).L/2);
 
 p_proj = FwdKinematicsAtS(Linkage,q,s_proj);
-plotFrame(p_proj,':');
+%plotFrame(p_proj,':');
 
 % Commanded frame
 if nargin > 4 && ~isempty(ctrl)

@@ -67,17 +67,29 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     % JdL = S*JdL;
 
     % Fixed-sliding
-    S_slide = [1 0 0 0 0 0; ...
-    0 1 0 0 0 0; ...
-    0 0 1 0 0 0; ...
-    0 0 0 0 1 0; ...
-    0 0 0 0 0 1
-    ];
-    S = eye(6);
-    err0 = S*err0;
-    J0 = S*J0;
-    Jd0 = S*Jd0;
-    errL = S_slide*errL;
-    JL = S_slide*JL;
-    JdL = S_slide*JdL;
+    % S_L = [1 0 0 0 0 0; ...
+    % 0 1 0 0 0 0; ...
+    % 0 0 1 0 0 0; ...
+    % 0 0 0 0 1 0; ...
+    % 0 0 0 0 0 1
+    % ];
+
+    % Orientation only!
+     S_L = [1 0 0 0 0 0; ...
+          0 1 0 0 0 0; ...
+          0 0 1 0 0 0; ...
+          0 0 0 0 0 1
+     ];
+
+    S_0 = eye(6);
+    %S_0 = [zeros(3,3) eye(3)];
+
+    err0 = S_0*err0;
+    J0 = S_0*J0;
+    Jd0 = S_0*Jd0;
+
+    %S_L = [zeros(3,3) eye(3)];
+    errL = S_L*errL;
+    JL = S_L*JL;
+    JdL = S_L*JdL;
 end
