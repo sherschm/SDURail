@@ -8,7 +8,7 @@ function RailLink = makeRailLink()
     
     CS = 'SDU'; %'C' for circular, 'R' for circular, 'E' for circular, 'SDU' for the C-rail
     %L = 5.415;
-    L = 5.3;
+    %L = 5.3;
     L = 5.205;
     %L = 25.415;
     Rho = 7850;
@@ -18,7 +18,7 @@ function RailLink = makeRailLink()
     %E = 2e9;
     Poi = 0.3;
     G =  E/(2*(1+Poi));
-    Eta = 1e6;
+    Eta = 5e6;
     %h = @(X1)0.05;
     %w = @(X1)0.005;
     %r = @(X1)0.03; %function of normalzied X. X1 in [0 1]

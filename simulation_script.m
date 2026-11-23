@@ -12,19 +12,19 @@ addpath('controllers')
 %import properties of deformable Rail
 run("RailParameters.m")
 
-carriage_type = "b"; %or "centre"%"three_points";%
+carriage_type = "a"; %or "centre"%"three_points";%
 if carriage_type == "b"
     run("CarriageParameters_Offset.m")
 elseif  carriage_type == "a"
     run("CarriageParameters.m")
 end
 
+carriage_constraints ="both_ends"; % "centre";%%or "centre"%"three_points";%
 
 % plot the chosen strain shape functions
 plotStrainBasis(RailLinkage)
 %%
 
-carriage_constraints = "both_ends"; %or "centre"%"three_points";%
 
 ndof = RailLinkage.ndof+RailCarriage.ndof; %6 for the carriage
 
@@ -85,12 +85,12 @@ x0 = [q0;zeros(ndof,1)];
 
 %Plot results & animate rail
 plotResults(tvec_out, x_out, xdot_out, dt, RailLinkage, RailCarriage,T_0_fixed,T_L_fixed,carriage_constraints)
-animateSystem(RailLinkage, RailCarriage, tvec_out, x_out, PD_controller)
+%animateSystem(RailLinkage, RailCarriage, tvec_out, x_out, PD_controller)
 
 %compute free response FFT of the carriage motion.
 carriage_motion = x_out(:,end-5:end);
-%carriage_motion = x_out(:,end); % z only
-carriage_motion = x_out(:,end-5:end);
+carriage_motion = x_out(:,end); % z only
+%carriage_motion = x_out(:,end-5:end);
 
 dynamics_plot_script
 

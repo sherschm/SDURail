@@ -14,6 +14,7 @@ s_here = RailLink.L/2;%+RailCarriage.VLinks(1).L/2;
 
 s_range = 0.0:0.001:RailLinkage.VLinks(1).L;%-RailCarriage.VLinks(1).L;
 
+s_range_plot = s_range+(5.3-RailLinkage.VLinks(1).L)/2;
 local_rotation = zeros(length(s_range),3,length(constraint_configs));
 carriage_def   = zeros(length(s_range),3,length(constraint_configs));
 
@@ -37,6 +38,8 @@ for j = 1:length(constraint_configs)
     
     end
 end
+styles = {'-','--',':','-.'};   % add more if needed
+
 
 %% Lateral plots
 figure('Color','w');
@@ -53,7 +56,6 @@ nexttile;
 hold on 
 cols = lines(length(constraint_configs));
 
-styles = {'-','--',':','-.'};   % add more if needed
 
 h = [];
 leg = {};
@@ -66,7 +68,7 @@ for j = 1:length(constraint_configs)
     %     'Color',c_y);
     hold on
 
-    hz = plot(s_range, carriage_def(:,3,j), ...
+    hz = plot(s_range_plot, carriage_def(:,3,j), ...
         styles{j}, ...
         'LineWidth',2.0);
     hold on
@@ -127,17 +129,17 @@ for j = 1:length(constraint_configs)
 
     % Smooth the profile
     z_smooth = smoothdata(carriage_def(:,3,j),'sgolay',501);
-    theta = gradient(z_smooth,s_range);
+    theta = gradient(z_smooth,s_range_plot);
 
     local_rotation_numerical = atan(theta); % radians
-    h_pitch = plot(s_range, local_rotation_numerical, ...
+    h_pitch = plot(s_range_plot, local_rotation_numerical, ...
             styles{j}, ...
          'LineWidth',2.0);
 
     h = [h h_pitch];
 
     hold on
-    % plot(s_range, -local_rotation(:,3,j), ...
+    % plot(s_range_plot, -local_rotation(:,3,j), ...
     %     ':', ...
     %     'LineWidth',2.5, ...
     %     'Color',[0.9290 0.6940 0.1250]);
@@ -212,73 +214,73 @@ figure('Color','w');
 c_y = [0.0000 0.4470 0.7410];   % blue
 c_green = [0.0000 0.6000 0.3000];
 
-t = tiledlayout(3,2, ...
+t = tiledlayout(1,2, ...
     'TileSpacing','compact', ...
     'Padding','compact');
 
-nexttile;
-hold on 
-cols = lines(length(constraint_configs));
-
-styles = {'-','--',':','-.'};   % add more if needed
-
-% x-def
-h = [];
-leg = {};
-
-for j = 1:length(constraint_configs)
-
-    % hy = plot(s_range, carriage_def(:,2,j), ...
-    %     styles{j}, ...
-    %     'LineWidth',2.0, ...
-    %     'Color',c_y);
-    hold on
-
-    hy = plot(s_range, carriage_def(:,2,j), ...
-        styles{j}, ...
-        'LineWidth',2.0);
-    hold on
-    %h = [h hy hz];
-    h = [h hy];
-    %leg{end+1} = sprintf('$y$, %s', names{j});
-    leg{end+1} = sprintf(names{j});
-end
-% h_ansys = plot(x_data(:,1), -x_data(:,2), ...
-%     'o', ...
-%     'MarkerSize', 4, ...
-%     'Color', c_green);
+% nexttile;
+% hold on 
+% cols = lines(length(constraint_configs));
 % 
-% h = [h h_ansys];
-% leg{end+1} = sprintf('ANSYS', names{j});
-
-xlabel('Position Along Rail, $s$ (m)', ...
-    'Interpreter','latex', ...
-    'FontSize',15);
-
-ylabel('Lateral $y$ rail deformation (m)', ...
-    'Interpreter','latex', ...
-    'FontSize',15);
-
-
-legend(h, leg, ...
-    'Location','best', ...
-    'Box','off', ...
-    'Interpreter','latex', TextColor ='black');
-ax = gca;
-ax.Color = 'w';
-ax.XColor = 'k';
-ax.YColor = 'k';
-ax.FontSize = 11;
-ax.LineWidth = 1.0;
-ax.TickDir = 'out';
-ax.Box = 'off';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-grid on;
-ax.GridAlpha = 0.15;
-ax.MinorGridAlpha = 0.08;
-
-% z-def
+% styles = {'-','--',':','-.'};   % add more if needed
+% 
+% % x-def
+% h = [];
+% leg = {};
+% 
+% for j = 1:length(constraint_configs)
+% 
+%     % hy = plot(s_range, carriage_def(:,2,j), ...
+%     %     styles{j}, ...
+%     %     'LineWidth',2.0, ...
+%     %     'Color',c_y);
+%     hold on
+% 
+%     hy = plot(s_range, carriage_def(:,2,j), ...
+%         styles{j}, ...
+%         'LineWidth',2.0);
+%     hold on
+%     %h = [h hy hz];
+%     h = [h hy];
+%     %leg{end+1} = sprintf('$y$, %s', names{j});
+%     leg{end+1} = sprintf(names{j});
+% end
+% % h_ansys = plot(x_data(:,1), -x_data(:,2), ...
+% %     'o', ...
+% %     'MarkerSize', 4, ...
+% %     'Color', c_green);
+% % 
+% % h = [h h_ansys];
+% % leg{end+1} = sprintf('ANSYS', names{j});
+% 
+% xlabel('Position Along Rail, $s$ (m)', ...
+%     'Interpreter','latex', ...
+%     'FontSize',15);
+% 
+% ylabel('Lateral $y$ rail deformation (m)', ...
+%     'Interpreter','latex', ...
+%     'FontSize',15);
+% 
+% 
+% legend(h, leg, ...
+%     'Location','best', ...
+%     'Box','off', ...
+%     'Interpreter','latex', TextColor ='black');
+% ax = gca;
+% ax.Color = 'w';
+% ax.XColor = 'k';
+% ax.YColor = 'k';
+% ax.FontSize = 11;
+% ax.LineWidth = 1.0;
+% ax.TickDir = 'out';
+% ax.Box = 'off';
+% ax.XMinorTick = 'on';
+% ax.YMinorTick = 'on';
+% grid on;
+% ax.GridAlpha = 0.15;
+% ax.MinorGridAlpha = 0.08;
+% 
+% % z-def
 nexttile;
 hold on 
 h = [];
@@ -292,7 +294,7 @@ for j = 1:length(constraint_configs)
     %     'Color',c_y);
     hold on
 
-    hz = plot(s_range, carriage_def(:,3,j), ...
+    hz = plot(s_range_plot, carriage_def(:,3,j), ...
         styles{j}, ...
         'LineWidth',2.0);
     hold on
@@ -345,97 +347,97 @@ ax.YMinorTick = 'on';
 grid on;
 ax.GridAlpha = 0.15;
 ax.MinorGridAlpha = 0.08;
-
-% Angular deformation
-h = [];
-nexttile;
-for j = 1:length(constraint_configs)
-    % plot(s_range, local_rotation(:,1,j), ...
-    %     '-', ...
-    %     'LineWidth',2.0, ...
-    %     'Color',[0 0.4470 0.7410]);
-    % hold on
-    
-    h_pitch = plot(s_range, -local_rotation(:,3,j), ...
-        styles{j}, ...
-        'LineWidth',2.0);
-    h = [h h_pitch];
-
-    hold on
-    % plot(s_range, -local_rotation(:,3,j), ...
-    %     ':', ...
-    %     'LineWidth',2.5, ...
-    %     'Color',[0.9290 0.6940 0.1250]);
-
-    %leg{end+1} = sprintf('$y$, %s', names{j});
-    leg{end+1} = sprintf(names{j});
-end
-% ansys_local_rotation = zeros(size(z_data,1)-1,1);
-% for i = 1:size(z_data,1)-1
-%     ansys_local_rotation(i) = (z_data(i+1,2)-z_data(i,2))/(z_data(i+1,1)-z_data(i,1));
+% 
+% % Angular deformation
+% h = [];
+% nexttile;
+% for j = 1:length(constraint_configs)
+%     % plot(s_range_plot, local_rotation(:,1,j), ...
+%     %     '-', ...
+%     %     'LineWidth',2.0, ...
+%     %     'Color',[0 0.4470 0.7410]);
+%     % hold on
+% 
+%     h_pitch = plot(s_range_plot, -local_rotation(:,3,j), ...
+%         styles{j}, ...
+%         'LineWidth',2.0);
+%     h = [h h_pitch];
+% 
+%     hold on
+%     % plot(s_range_plot, -local_rotation(:,3,j), ...
+%     %     ':', ...
+%     %     'LineWidth',2.5, ...
+%     %     'Color',[0.9290 0.6940 0.1250]);
+% 
+%     %leg{end+1} = sprintf('$y$, %s', names{j});
+%     leg{end+1} = sprintf(names{j});
 % end
+% % ansys_local_rotation = zeros(size(z_data,1)-1,1);
+% % for i = 1:size(z_data,1)-1
+% %     ansys_local_rotation(i) = (z_data(i+1,2)-z_data(i,2))/(z_data(i+1,1)-z_data(i,1));
+% % end
+% % 
+% % x = z_data(:,1);
+% % z = z_data(:,2);
+% % 
+% % % Smooth the profile
+% % z_smooth = smoothdata(z,'sgolay',21);
+% % theta = gradient(z_smooth,x);
+% % 
+% % ansys_local_rotation = atan(theta); % radians
+% % 
+% % h_ansys = plot(z_data(:,1), ansys_local_rotation, ...
+% %     'o', ...
+% %     'MarkerSize', 4, ...
+% %     'Color', c_green);
+% % 
+% % h = [h h_ansys];
 % 
-% x = z_data(:,1);
-% z = z_data(:,2);
+% xlabel('Position Along Rail, $s$ (m)', ...
+%     'Interpreter','latex', ...
+%     'FontSize',15);
 % 
-% % Smooth the profile
-% z_smooth = smoothdata(z,'sgolay',21);
-% theta = gradient(z_smooth,x);
+% ylabel('Angular Yaw Deformation (rad)', ...
+%     'Interpreter','latex', ...
+%     'FontSize',15);
 % 
-% ansys_local_rotation = atan(theta); % radians
-% 
-% h_ansys = plot(z_data(:,1), ansys_local_rotation, ...
-%     'o', ...
-%     'MarkerSize', 4, ...
-%     'Color', c_green);
-% 
-% h = [h h_ansys];
-
-xlabel('Position Along Rail, $s$ (m)', ...
-    'Interpreter','latex', ...
-    'FontSize',15);
-
-ylabel('Angular Yaw Deformation (rad)', ...
-    'Interpreter','latex', ...
-    'FontSize',15);
-
-legend(h, leg, ...
-    'Location','best', ...
-    'Box','off', ...
-    'Interpreter','latex', TextColor ='black');
-title('(b)','Interpreter','latex','Interpreter','latex', ...
-    'Color','k');
-ax = gca;
-ax.Color = 'w';
-ax.XColor = 'k';
-ax.YColor = 'k';
-ax.FontSize = 11;
-ax.LineWidth = 1.0;
-ax.TickDir = 'out';
-ax.Box = 'off';
-ax.XMinorTick = 'on';
-ax.YMinorTick = 'on';
-grid on;
-ax.GridAlpha = 0.15;
-ax.MinorGridAlpha = 0.08;
+% legend(h, leg, ...
+%     'Location','best', ...
+%     'Box','off', ...
+%     'Interpreter','latex', TextColor ='black');
+% title('(b)','Interpreter','latex','Interpreter','latex', ...
+%     'Color','k');
+% ax = gca;
+% ax.Color = 'w';
+% ax.XColor = 'k';
+% ax.YColor = 'k';
+% ax.FontSize = 11;
+% ax.LineWidth = 1.0;
+% ax.TickDir = 'out';
+% ax.Box = 'off';
+% ax.XMinorTick = 'on';
+% ax.YMinorTick = 'on';
+% grid on;
+% ax.GridAlpha = 0.15;
+% ax.MinorGridAlpha = 0.08;
 
 % Roll deformation
 h = [];
 nexttile;
 for j = 1:length(constraint_configs)
-    % plot(s_range, local_rotation(:,1,j), ...
+    % plot(s_range_plot, local_rotation(:,1,j), ...
     %     '-', ...
     %     'LineWidth',2.0, ...
     %     'Color',[0 0.4470 0.7410]);
     % hold on
 
-    h_roll = plot(s_range, local_rotation(:,1,j), ...
+    h_roll = plot(s_range_plot, local_rotation(:,1,j), ...
         styles{j}, ...
         'LineWidth',2.0);
     h = [h h_roll];
 
     hold on
-    % plot(s_range, -local_rotation(:,3,j), ...
+    % plot(s_range_plot, -local_rotation(:,3,j), ...
     %     ':', ...
     %     'LineWidth',2.5, ...
     %     'Color',[0.9290 0.6940 0.1250]);
@@ -487,7 +489,7 @@ grid on;
 ax.GridAlpha = 0.15;
 ax.MinorGridAlpha = 0.08;
 % Figure size and export
-set(gcf,'Units','inches','Position',[1 1 10 7]);
+set(gcf,'Units','inches','Position',[1 1 10 3.5]);
 
 exportgraphics(gcf, ...
     'rail_carriage_deformation_torsion.pdf', ...
