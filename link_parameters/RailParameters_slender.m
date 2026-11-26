@@ -7,17 +7,16 @@ function RailLink = makeRailLink()
     RailLink.npie=2;
     
     CS = 'R'; %'C' for circular, 'R' for circular, 'E' for circular
-    L = 20.0;
+    L = 5.0;
     %L = 25.415;
-    Rho = 7850;
+    Rho = 0.01;
     %Rho = 2700;
-    % E = 200e9;
-    E = 2e10;
+    E = 200e9;
     Poi = 0.3;
     G =  E/(2*(1+Poi));
     Eta = 1e6;
-    h = @(X1)0.12;
-    w = @(X1)0.12;
+    h = @(X1)0.1;
+    w = @(X1)0.1;
     r = @(X1)0.03; %function of normalzied X. X1 in [0 1]
     
     [M,cx] = RigidBodyProperties(CS,L,Rho,h,w); %for circular cross section

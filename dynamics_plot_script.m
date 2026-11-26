@@ -39,6 +39,7 @@ for j = 1:Ndof
 
 end
 
+
 %% Plot all DOFs
 figure;
 hold on
@@ -72,11 +73,15 @@ grid on;
 ax.GridAlpha = 0.15;
 ax.MinorGridAlpha = 0.08;
 
-
 addpath(".\data\dynamic_data\")
 
 T = readmatrix('lateral_response.xlsx');
-plot(T(1,2:end),T(30,2:end))
+figure
+plot(T(1,2:end),T(28,2:end))
+hold on
+plot(tvec_out, carriage_motion(:,6), "-")
+legend('ANSYS','Cosserat')
+
 %%
 T2 = readmatrix('payload_a.csv');
 
@@ -85,7 +90,7 @@ t = T2(2:end,2);
 y = T2(2:end,3)-mean(T2(2:end,3));
 
 % Uniform time vector
-dt = 0.01;
+dt = 0.001;
 t_uniform = t(1):dt:t(end);
 
 % Interpolate response onto uniform grid
@@ -97,7 +102,7 @@ figure
 plot(t_uniform, (y_uniform-y_uniform(1))*1e-3, '-')
 
 hold on 
-plot(tvec_out, carriage_motion, '-')
+plot(tvec_out, carriage_motion(:,6), '-')
 xlabel('Time (s)')
 legend('ANSYS','Cosserat')
 ylabel('Response')
@@ -107,30 +112,61 @@ Nt = length(y_uniform)-1;
 
 Fs = 1/dt;              % Sampling frequency [Hz]
 f = Fs*(0:floor(Nt/2))/Nt;
-amplitude = zeros(length(f), Ndof);
-for j = 1:Ndof
-    % ansys
-    x = T2(2:end,3);
+amplitude_ansys = zeros(length(f));
 
-    % Remove mean (important)
-    x = x - mean(x);
 
-    % FFT
-    Y = fft(x);
+j = 6;
+% ansys
+x_ansys = y_uniform';
 
-    % Two-sided spectrum
-    P2 = abs(Y/Nt);
+% Remove mean (important)
+x_ansys = x_ansys - mean(x_ansys);
 
-    % Single-sided spectrum
-    P1 = P2(1:floor(Nt/2)+1);
-    P1(2:end-1) = 2*P1(2:end-1);
+% FFT
+Y_ansys = fft(x_ansys);
 
-    amplitude(:,j) = P1;
+% Two-sided spectrum
+P2_ansys = abs(Y_ansys/Nt);
 
-    % Ignore zero-frequency peak
-    [dominant_amp(j), idx] = max(P1(2:end));
+% Single-sided spectrum
+P1_ansys = P2_ansys(1:floor(Nt/2)+1);
+P1_ansys(2:end-1) = 2*P1_ansys(2:end-1);
 
-    idx = idx + 1;
-    dominant_freq(j) = f(idx);
+amplitude_ansys = P1_ansys;
 
-end
+% Ignore zero-frequency peak
+[dominant_amp_ansys, idx_ansys] = max(P1_ansys(2:end));
+
+idx = idx + 1;
+dominant_freq_ansys = f(idx);
+
+
+% ansys
+x_cosserat = carriage_motion(:,6);
+
+% Remove mean (important)
+x_cosserat = x_cosserat - mean(x_cosserat);
+
+% FFT
+Y_cosserat = fft(x_cosserat);
+
+% Two-sided spectrum
+P2_cosserat = abs(Y_cosserat/Nt);
+
+% Single-sided spectrum
+P1_cosserat = P2_cosserat(1:floor(Nt/2)+1);
+P1_cosserat(2:end-1) = 2*P1_cosserat(2:end-1);
+
+amplitude_cosserat = P1_cosserat;
+
+% Ignore zero-frequency peak
+[dominant_amp_cosserat, idx_cosserat] = max(P1_cosserat(2:end));
+
+idx = idx + 1;
+dominant_freq_cosserat = f(idx);
+
+figure
+plot(f,amplitude_ansys*(1/max(amplitude_ansys)))
+hold on
+plot(f,amplitude_cosserat*(1/max(amplitude_cosserat)))
+xlim([0,100])

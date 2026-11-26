@@ -1,5 +1,5 @@
 
-function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller,carriage_constraints)
+function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt,T_0_fixed,T_L_fixed, controller,carriage_constraints,rail_constraints)
 
     n_beam  = Linkage.ndof;
     n_mass  = Carriage.ndof;
@@ -7,14 +7,14 @@ function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt
     
     %Baumgarte Stabilisation parameters
 
-     t_baum = 0.1;
-      % alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
-      % beta =   1/(t_baum) ; %100.0;%0.0;%% stiffness 
-     alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
-     beta =   0.0; %100.0;%0.0;%% stiffness 
+     t_baum = 0.05;
+      alpha =  2/t_baum; %50.0;%0.0;%% damping 0.0;%0.0;%
+      beta =   1/(t_baum^2) ; %100.0;%0.0;%% stiffness 
+      alpha = 0.0; %50.0;%0.0;%% damping 0.0;%0.0;%
+      beta =   0.0; %100.0;%0.0;%% stiffness 
      % W = blkdiag( ...
      %     10*eye(length(err_mass)), ...
-     %     eye(length(err0)), ...
+     %     eye(length(err0)), ...s
      %     eye(length(errL)));
     
      s_prev    = ProjectS(Linkage,Carriage, x0(1:n_beam), x0(n_beam+1:n_beam+n_mass),Linkage.VLinks(1).L/2);
@@ -54,7 +54,7 @@ function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt
         % kinematics
         %Compute constraint errors & constraint Jacobians
         tic
-        [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed);
+        [err0, J0, Jd0, errL, JL, JdL] = ErrorDynamicsAt0andL(Linkage,Carriage, q_b, qd_b, T_0_fixed, T_L_fixed,rail_constraints);
         t_constraints= toc;
         %fprintf('t_end_constraints = %e\n', t_constraints);
         tic
@@ -133,15 +133,16 @@ function [tvec_out, x_out, xdot_out] = ODESolverFaster(Linkage,Carriage,x0,tf,dt
         %u=0.0;
     
         %Torsional force:
-
+        % 
         % if t < 0.02
-        %     torsion_tau = 100000000.0;
+        %     torsion_tau = 5.0;
         % else
         %     torsion_tau = 0.0;
         % end
-
+        % 
         % %Ix = [0;0;0;0;0;1];
-        % Ix = [1;0;0;0;0;0];
+        % Ix = [1;0;0;0;0;1];
+        % 
         % Binb = zeros(n_beam,1);
         % Binm = Ix;
         % % Binb = JacobianAtS(Linkage,q_b,s)'*Ix;

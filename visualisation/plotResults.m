@@ -42,7 +42,7 @@ function plotResults(tvec_out, x_out, xd_sol, dt, RailLinkage, RailCarriage, T_0
     % ----------------------------
     figure('Color','w');
 
-    t = tiledlayout(1,2, ...
+    t = tiledlayout(2,1, ...
         'TileSpacing','compact', ...
         'Padding','compact');
     nexttile;
@@ -55,12 +55,15 @@ function plotResults(tvec_out, x_out, xd_sol, dt, RailLinkage, RailCarriage, T_0
     ylabel('Carriage position (m)');
     legend;
     legend('Location','best', ...
-        'Box','off', ...
         'Interpreter','latex', TextColor ='black');
+    legend('Location','eastoutside');
+    set(legend,'Color','w')
+    set(legend,'TextColor','k')
+    set(legend,'EdgeColor','k')
     grid on;
     title('(a)','Interpreter','latex','Interpreter','latex', ...
         'Color','k');
-
+xlim([0,0.2])
     ax = gca;
     ax.Color = 'w';
     ax.XColor = 'k';
@@ -85,12 +88,16 @@ function plotResults(tvec_out, x_out, xd_sol, dt, RailLinkage, RailCarriage, T_0
     ylabel('Carriage orientation (rad)');
     legend;
     legend('Location','best', ...
-        'Box','off', ...
         'Interpreter','latex', TextColor ='black');
+    legend('Location','eastoutside');
+    set(legend,'Color','w')
+    set(legend,'TextColor','k')
+    set(legend,'EdgeColor','k')
     grid on;
     title('(b)','Interpreter','latex','Interpreter','latex', ...
         'Color','k');
 
+    xlim([0,0.2])
     ax = gca;
     ax.Color = 'w';
     ax.XColor = 'k';
@@ -109,7 +116,7 @@ function plotResults(tvec_out, x_out, xd_sol, dt, RailLinkage, RailCarriage, T_0
     if ~exist('plots','dir')
         mkdir('plots');
     end
-    set(gcf,'Units','inches','Position',[1 1 10 3.5]);
+    set(gcf,'Units','inches','Position',[1 1 10 5.5]);
     set(findall(gcf,'type','axes'),'FontSize',14);
     
     set(gcf, 'PaperPositionMode','auto');
@@ -118,134 +125,176 @@ function plotResults(tvec_out, x_out, xd_sol, dt, RailLinkage, RailCarriage, T_0
     exportgraphics(gcf, ...
         'plots/carriage_response.pdf', ...
         'ContentType','vector');
-%%
-    figure('Color','w');
 
-    plot(tvec_out, z_mass, 'DisplayName','z (m)', 'LineWidth', 2);
-    xlabel('Time (s)');
-    ylabel('Position (m)');
-    saveas(gcf, fullfile('plots','mass_response_z_only.png'));
-    
-    % ----------------------------
-    % Plot s derivative
-    % ----------------------------
-    dsdt = diff(s) / dt;
 
-    figure('Color','w');
-    plot(tvec_out(1:end-1), dsdt);
-    xlabel('Time (s)');
-    ylabel('ds/dt');
+    %% Forcing:
+
+    % Time vector
+    t = linspace(0,0.2,1000);
+
+    % Torque pulse
+    torsion_tau = zeros(size(t));
+    torsion_tau(t < 0.02) = 10.0;
+
+    % Plot
+    figure('Color','w')
+    plot(t,torsion_tau,'LineWidth',2,Color ='r')
+
+    xlabel('Time (s)')
+    ylabel('Torsional torque, $\tau$ (Nm)', ...
+        'Interpreter','latex')
+    title('Applied Torsional Pulse',Color = 'k')
+    ax = gca;
+    ax.Color = 'w';
+    ax.XColor = 'k';
+    ax.YColor = 'k';
+    ax.FontSize = 14;
+    ax.LineWidth = 1.0;
+    ax.TickDir = 'out';
+    ax.Box = 'off';
+    ax.XMinorTick = 'on';
+    ax.YMinorTick = 'on';
     grid on;
+    ax.GridAlpha = 0.15;
+    ax.MinorGridAlpha = 0.08;
+    grid on
+    box off
+    set(gcf,'Units','inches','Position',[1 1 5 4]);
 
-    % Save
-    set(gcf, 'Units','pixels', 'Position',[100 100 500 350]);
-    set(findall(gcf,'type','axes'),'FontSize',14);
+    xlim([0 0.2])
+    ylim([0 11])
 
-    set(gcf, 'PaperPositionMode','auto');
-    print('plots/sdot.png','-dpng','-r300');
-
-    % ----------------------------
-    % Combined plots
-    % ----------------------------
-    figure('Color','w');
-
-    % Left: s(t)
-    subplot(1,2,1);
-    plot(tvec_out, s, 'k');
-    ylabel('s (m)');
-    xlabel('Time (s)');
-    grid on;
-
-    % Right: beam coordinates
-    subplot(1,2,2);
-    plot(tvec_out, q_beam_full);
-    ylabel('Beam modal strain coordinates');
-    xlabel('Time (s)');
-    grid on;
-
-    % Save
-    set(gcf, 'Units','pixels', 'Position',[100 100 1000 350]);
-    set(findall(gcf,'type','axes'),'FontSize',14);
-    
-    set(gcf, 'PaperPositionMode','auto');
-    print('plots/response.png','-dpng','-r300');
-
-    % plot mass Constraint Violations
-    ndof_tot = RailLinkage.ndof+RailCarriage.ndof;
-    % Evaluate once to determine size of e_out
-    %disp(x_out(1, 1:ndof_tot))
-    [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
-                 RailLinkage, RailCarriage, x_out(1, 1:RailLinkage.ndof), zeros(RailLinkage.ndof,1), T_0_fixed, T_L_fixed);
-    e_out = [err0;errL];
-    n_e = length(e_out);
-    
-    E_out_all = zeros(n_e, N);
-    
-    % Loop over trajectory
-    for k = 1:N
-        [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
-                 RailLinkage, RailCarriage, x_out(k, 1:RailLinkage.ndof), xd_sol(k, 1:RailLinkage.ndof), T_0_fixed, T_L_fixed);
-        e_out = [err0;errL];
-        E_out_all(:,k) = e_out(:);
-    end
-    
-    % Time vector (assume unit timestep unless you have dt)
-    t = 1:N;
-    
-    % Plot each constraint violation
-    figure('Color','w'); hold on; grid on;
-    colors = lines(n_e);
-    
-    for i = 1:n_e
-        plot(t, E_out_all(i,:), 'LineWidth', 1.5, 'Color', colors(i,:));
-    end
-    
-    xlabel('Time step');
-    ylabel('Constraint violation (e\_out)');
-    title('Constraint Violations Over Time');
-    legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
-    print('plots/constraint_violation_ends.png','-dpng','-r300');
-    
-
-    % plot Constraint Violations
-    ndof_tot = RailLinkage.ndof+RailCarriage.ndof;
-    % Evaluate once to determine size of e_out
-    
-    if carriage_constraints == "centre"
-        [e_out, ~, ~] = ErrorJAtS(RailLinkage, RailCarriage, s(1), x_out(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
-    elseif carriage_constraints == "both_ends"
-        [e_out, ~, ~] = ErrorJAtS_both_ends(RailLinkage, RailCarriage, s(1), x_out(1, 1:ndof_tot)',xd_sol(1, 1:ndof_tot)');
-    end
-    n_e = length(e_out);
-    
-    E_out_all = zeros(n_e, N);
-    
-    % Loop over trajectory
-    for k = 1:N
-        if carriage_constraints == "centre"
-            [e_out, ~, ~] = ErrorJAtS(RailLinkage, RailCarriage, s(k), x_out(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
-        elseif carriage_constraints == "both_ends"
-            [e_out, ~, ~] = ErrorJAtS_both_ends(RailLinkage, RailCarriage, s(k), x_out(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
-        end
-        E_out_all(:,k) = e_out(:);
-    end
-    
-    % Time vector (assume unit timestep unless you have dt)
-    t = 1:N;
-    
-    % Plot each constraint violation
-    figure('Color','w'); hold on; grid on;
-    colors = lines(n_e);
-    
-    for i = 1:n_e
-        plot(t, E_out_all(i,:), 'LineWidth', 1.5, 'Color', colors(i,:));
-    end
-    
-    xlabel('Time step');
-    ylabel('Constraint violation (e\_out)');
-    title('Constraint Violations Over Time');
-    legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
-    print('plots/constraint_violation_mass.png','-dpng','-r300');
-    
+    exportgraphics(gcf, ...
+        'plots/torsion_pulse.pdf', ...
+        'ContentType','vector');
+% %%
+%     figure('Color','w');
+% 
+%     plot(tvec_out, z_mass, 'DisplayName','z (m)', 'LineWidth', 2);
+%     xlabel('Time (s)');
+%     ylabel('Position (m)');
+%     saveas(gcf, fullfile('plots','mass_response_z_only.png'));
+% 
+%     % ----------------------------
+%     % Plot s derivative
+%     % ----------------------------
+%     dsdt = diff(s) / dt;
+% 
+%     figure('Color','w');
+%     plot(tvec_out(1:end-1), dsdt);
+%     xlabel('Time (s)');
+%     ylabel('ds/dt');
+%     grid on;
+% 
+%     % Save
+%     set(gcf, 'Units','pixels', 'Position',[100 100 500 350]);
+%     set(findall(gcf,'type','axes'),'FontSize',14);
+% 
+%     set(gcf, 'PaperPositionMode','auto');
+%     print('plots/sdot.png','-dpng','-r300');
+% 
+%     % ----------------------------
+%     % Combined plots
+%     % ----------------------------
+%     figure('Color','w');
+% 
+%     % Left: s(t)
+%     subplot(1,2,1);
+%     plot(tvec_out, s, 'k');
+%     ylabel('s (m)');
+%     xlabel('Time (s)');
+%     grid on;
+% 
+%     % Right: beam coordinates
+%     subplot(1,2,2);
+%     plot(tvec_out, q_beam_full);
+%     ylabel('Beam modal strain coordinates');
+%     xlabel('Time (s)');
+%     grid on;
+% 
+%     % Save
+%     set(gcf, 'Units','pixels', 'Position',[100 100 1000 350]);
+%     set(findall(gcf,'type','axes'),'FontSize',14);
+% 
+%     set(gcf, 'PaperPositionMode','auto');
+%     print('plots/response.png','-dpng','-r300');
+% 
+%     % plot mass Constraint Violations
+%     ndof_tot = RailLinkage.ndof+RailCarriage.ndof;
+%     % Evaluate once to determine size of e_out
+%     %disp(x_out(1, 1:ndof_tot))
+%     [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
+%                  RailLinkage, RailCarriage, x_out(1, 1:RailLinkage.ndof), zeros(RailLinkage.ndof,1), T_0_fixed, T_L_fixed);
+%     e_out = [err0;errL];
+%     n_e = length(e_out);
+% 
+%     E_out_all = zeros(n_e, N);
+% 
+%     % Loop over trajectory
+%     for k = 1:N
+%         [err0,~,~,errL,~,~] = ErrorDynamicsAt0andL( ...
+%                  RailLinkage, RailCarriage, x_out(k, 1:RailLinkage.ndof), xd_sol(k, 1:RailLinkage.ndof), T_0_fixed, T_L_fixed);
+%         e_out = [err0;errL];
+%         E_out_all(:,k) = e_out(:);
+%     end
+% 
+%     % Time vector (assume unit timestep unless you have dt)
+%     t = 1:N;
+% 
+%     % Plot each constraint violation
+%     figure('Color','w'); hold on; grid on;
+%     colors = lines(n_e);
+% 
+%     for i = 1:n_e
+%         plot(t, E_out_all(i,:), 'LineWidth', 1.5, 'Color', colors(i,:));
+%     end
+% 
+%     xlabel('Time step');
+%     ylabel('Constraint violation (e\_out)');
+%     title('Constraint Violations Over Time');
+%     legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
+%     print('plots/constraint_violation_ends.png','-dpng','-r300');
+% 
+% 
+%     % plot Constraint Violations
+%     ndof_tot = RailLinkage.ndof+RailCarriage.ndof;
+%     % Evaluate once to determine size of e_out
+% 
+%     if carriage_constraints == "centre"
+%         [e_out, ~, ~] = ErrorJAtS(RailLinkage, RailCarriage, s(1), x_out(1, 1:ndof_tot),xd_sol(1, 1:ndof_tot));
+%     elseif carriage_constraints == "both_ends"
+%         [e_out, ~, ~] = ErrorJAtS_both_ends(RailLinkage, RailCarriage, s(1), x_out(1, 1:ndof_tot)',xd_sol(1, 1:ndof_tot)');
+%     end
+%     n_e = length(e_out);
+% 
+%     E_out_all = zeros(n_e, N);
+% 
+%     % Loop over trajectory
+%     for k = 1:N
+%         if carriage_constraints == "centre"
+%             [e_out, ~, ~] = ErrorJAtS(RailLinkage, RailCarriage, s(k), x_out(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+%         elseif carriage_constraints == "both_ends"
+%             [e_out, ~, ~] = ErrorJAtS_both_ends(RailLinkage, RailCarriage, s(k), x_out(k, 1:ndof_tot)',xd_sol(k, 1:ndof_tot)');
+%         end
+%         E_out_all(:,k) = e_out(:);
+%     end
+% 
+%     % Time vector (assume unit timestep unless you have dt)
+%     t = 1:N;
+% 
+%     % Plot each constraint violation
+%     figure('Color','w'); hold on; grid on;
+%     colors = lines(n_e);
+% 
+%     for i = 1:n_e
+%         plot(t, E_out_all(i,:), 'LineWidth', 1.5, 'Color', colors(i,:));
+%     end
+% 
+%     xlabel('Time step');
+%     ylabel('Constraint violation (e\_out)');
+%     title('Constraint Violations Over Time');
+%     legend(arrayfun(@(i) sprintf('e_{out,%d}', i), 1:n_e, 'UniformOutput', false));
+%     print('plots/constraint_violation_mass.png','-dpng','-r300');
+% 
 end
 

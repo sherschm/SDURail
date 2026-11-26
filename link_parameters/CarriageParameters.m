@@ -31,16 +31,8 @@ function RailLink = makeCarriage()
     I_carriage = 1e-9*I_carriage_gmm2;
     M_carriage = defineSpatialInertia(5362.126, I_carriage, [0.0, 0.0, 0.0]);
     
-
-    % mass = 5362.126;
     cx = L/2;
-    % M = zeros(6,6);
-    % M(1,1) = 0.01;
-    % M(2,2) = 0.01;
-    % M(3,3) = 0.01;
-    % M(4,4) = mass;
-    % M(5,5) = mass;
-    % M(6,6) = mass;
+
     M = M_carriage + M_payload;
 
 

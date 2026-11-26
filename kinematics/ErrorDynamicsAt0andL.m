@@ -1,5 +1,5 @@
 function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
-    Linkage, Carriage, q_b, qd_b, T_0_fixed, T_L_fixed)
+    Linkage, Carriage, q_b, qd_b, T_0_fixed, T_L_fixed,rail_constraints)
 
     % ----------------------------
     % Kinematics
@@ -57,38 +57,24 @@ function [err0,J0,Jd0,errL,JL,JdL] = ErrorDynamicsAt0andL( ...
     % JL = S*JL;
     % JdL = S*JdL;
 
-    % % Fixed-Fixed
-    % S = eye(6);
-    % err0 = S*err0;
-    % J0 = S*J0;
-    % Jd0 = S*Jd0;
-    % errL = S*errL;
-    % JL = S*JL;
-    % JdL = S*JdL;
-
-    % Fixed-sliding
-    % S_L = [1 0 0 0 0 0; ...
-    % 0 1 0 0 0 0; ...
-    % 0 0 1 0 0 0; ...
-    % 0 0 0 0 1 0; ...
-    % 0 0 0 0 0 1
-    % ];
-
-    % Orientation only!
-     S_L = [1 0 0 0 0 0; ...
-          0 1 0 0 0 0; ...
-          0 0 1 0 0 0; ...
-          0 0 0 0 0 1
-     ];
-
-    S_0 = eye(6);
-    %S_0 = [zeros(3,3) eye(3)];
+    if rail_constraints == "fixed-sliding"
+        S_0 = eye(6);
+        % free to slide in x direction only
+        S_L = [1 0 0 0 0 0; ...
+              0 1 0 0 0 0; ...
+              0 0 1 0 0 0; ...
+              0 0 0 0 1 0;
+              0 0 0 0 0 1
+         ];
+    elseif rail_constraints == "fixed-fixed"
+        S_0 = eye(6);
+        S_L = eye(6);
+    end
 
     err0 = S_0*err0;
     J0 = S_0*J0;
     Jd0 = S_0*Jd0;
 
-    %S_L = [zeros(3,3) eye(3)];
     errL = S_L*errL;
     JL = S_L*JL;
     JdL = S_L*JdL;
